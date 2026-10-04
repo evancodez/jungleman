@@ -165,6 +165,7 @@ export class Game {
       }
     }
     this.animator.update(gdt, this.player, this.time);
+    this.character.root.visible = !(playing && this.rig.tooClose);
     this.levelView.update(gdt, this.time, this.player.pos, this.camera);
     if (this.hooks.update) this.hooks.update(this, gdt, dt);
 

@@ -39,12 +39,12 @@ export function run(ctx, seconds, opts = {}) {
   const n = Math.round(seconds / dt);
   const states = new Set();
   for (let i = 0; i < n; i++) {
-    ctx.input.time += dt;
     if (opts.each) opts.each(ctx, i * dt);
     ctx.game.vines.update(dt, ctx.input.time, ctx.player.pos);
-    ctx.player.update(dt, opts.camYaw ?? camYawFor(opts.dir ?? [0, -1]));
+    ctx.player.update(dt, opts.camYawFn ? opts.camYawFn(ctx) ?? 0 : opts.camYaw ?? camYawFor(opts.dir ?? [0, -1]));
     states.add(ctx.player.state);
     if (ctx.input._tap) { ctx.input.release(ctx.input._tap); ctx.input._tap = null; }
+    ctx.input.time += dt;
   }
   return states;
 }

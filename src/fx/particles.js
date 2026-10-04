@@ -168,18 +168,18 @@ export class Particles {
     const R = this.r;
     for (let i = 0; i < n; i++) {
       const a = R() * 6.28, s = (1 + R() * 2) * power;
-      this.soft.spawn({ x: pos.x + Math.cos(a) * 0.3, y: pos.y + 0.1, z: pos.z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: R() * 1.2 * power, vz: Math.sin(a) * s, life: 0.6 + R() * 0.6, size: 0.35, size1: 1.2 + power * 0.6, r: c[0], g: c[1], b: c[2], a: 0.45, drag: 3.5, grav: -0.3 });
+      this.soft.spawn({ x: pos.x + Math.cos(a) * 0.3, y: pos.y + 0.1, z: pos.z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: R() * 1.2 * power, vz: Math.sin(a) * s, life: 0.6 + R() * 0.6, size: 0.35, size1: 1.2 + power * 0.6, r: c[0] * 0.55, g: c[1] * 0.55, b: c[2] * 0.55, a: 0.4, drag: 3.5, grav: -0.3 });
     }
   }
 
   leaves(pos, n = 4, vel = null) {
     const R = this.r;
     for (let i = 0; i < n; i++) {
-      const g = 0.35 + R() * 0.3;
+      const g = 0.2 + R() * 0.15;
       this.soft.spawn({
         x: pos.x + (R() - 0.5) * 0.6, y: pos.y + (R() - 0.2) * 0.4, z: pos.z + (R() - 0.5) * 0.6,
         vx: (vel ? vel.x * 0.2 : 0) + (R() - 0.5) * 3, vy: 1 + R() * 2.5, vz: (vel ? vel.z * 0.2 : 0) + (R() - 0.5) * 3,
-        life: 1.4 + R() * 1.4, size: 0.22, size1: 0.2, r: 0.25 + R() * 0.2, g, b: 0.08, a: 1, drag: 2.2, grav: 2.2, kind: 1, spin: (R() - 0.5) * 10,
+        life: 1.4 + R() * 1.4, size: 0.16, size1: 0.15, r: 0.13 + R() * 0.12, g, b: 0.05, a: 1, drag: 2.2, grav: 2.2, kind: 1, spin: (R() - 0.5) * 10,
       });
     }
   }
@@ -235,15 +235,18 @@ export class Particles {
     this.ambientT += dt;
     while (this.ambientT > 0.05) {
       this.ambientT -= 0.05;
-      const a = R() * 6.28, d = 4 + R() * 26;
+      const a = R() * 6.28, d = 6 + R() * 26;
       const x = focus.x + Math.cos(a) * d, z = focus.z + Math.sin(a) * d;
       const y = focus.y + (R() - 0.3) * 8;
-      if (R() < 0.45) {
-        this.glow.spawn({ x, y, z, vx: (R() - 0.5) * 0.6, vy: (R() - 0.5) * 0.3, vz: (R() - 0.5) * 0.6, life: 3 + R() * 3, size: 0.12, size1: 0.1, r: 0.85, g: 1, b: 0.4, a: 0.85, drag: 0.2, kind: 2 });
-      } else if (R() < 0.6) {
-        this.glow.spawn({ x, y: y + 2, z, vx: 0.3, vy: -0.05, vz: 0.15, life: 5, size: 0.06, size1: 0.06, r: 1, g: 0.95, b: 0.8, a: 0.5, drag: 0, kind: 2 });
-      } else {
-        this.soft.spawn({ x, y: y + 12, z, vx: 0.4 + (R() - 0.5), vy: -0.6, vz: (R() - 0.5), life: 8, size: 0.22, size1: 0.22, r: 0.35 + R() * 0.25, g: 0.4 + R() * 0.2, b: 0.1, a: 1, drag: 0.6, grav: 0.25, kind: 1, spin: (R() - 0.5) * 4 });
+      const roll = R();
+      if (roll < 0.18) {
+        // Fireflies, mostly low to the ground.
+        this.glow.spawn({ x, y: Math.min(y, focus.y + 1), z, vx: (R() - 0.5) * 0.6, vy: (R() - 0.5) * 0.3, vz: (R() - 0.5) * 0.6, life: 3 + R() * 3, size: 0.08, size1: 0.07, r: 0.8, g: 1, b: 0.35, a: 0.55, drag: 0.2, kind: 2 });
+      } else if (roll < 0.55) {
+        // Pollen motes catching the light.
+        this.glow.spawn({ x, y: y + 2, z, vx: 0.3, vy: -0.05, vz: 0.15, life: 5, size: 0.045, size1: 0.045, r: 1, g: 0.95, b: 0.8, a: 0.4, drag: 0, kind: 2 });
+      } else if (roll < 0.75) {
+        this.soft.spawn({ x, y: y + 12, z, vx: 0.4 + (R() - 0.5), vy: -0.6, vz: (R() - 0.5), life: 8, size: 0.16, size1: 0.16, r: 0.16 + R() * 0.12, g: 0.2 + R() * 0.1, b: 0.05, a: 1, drag: 0.6, grav: 0.25, kind: 1, spin: (R() - 0.5) * 4 });
       }
     }
     // Waterfall mist & splash spray.

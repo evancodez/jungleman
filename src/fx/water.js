@@ -125,8 +125,11 @@ export function createWater(textures) {
         // Foam at shores and on fast water.
         float nz = texture2D(noise, vWPos.xz * 0.15 - f * time * 0.5).r;
         float foam = smoothstep(0.3, 0.0, vDepth + (nz - 0.5) * 0.35) * 0.6;
-        float nz2 = texture2D(noise, vWPos.xz * 0.043 - f * time * 0.21).g;
-        foam += smoothstep(0.7, 0.85, nz * 0.6 + nz2 * 0.6) * sp * 0.25;
+        // Thin flow streaks (stretched along the current).
+        vec2 fd = normalize(vFlow + vec2(1e-4));
+        vec2 sv = vec2(dot(vWPos.xz, vec2(-fd.y, fd.x)) * 0.35, dot(vWPos.xz, fd) * 0.04 - time * 0.35 * sp);
+        float streak = smoothstep(0.72, 0.9, texture2D(noise, sv).b);
+        foam += streak * sp * 0.22;
         float poolDist = length(vWPos.xz - vec2(0.0, -66.5));
         foam += smoothstep(9.0, 2.0, poolDist) * smoothstep(0.35, 0.7, texture2D(noise, vWPos.xz * 0.3 + vec2(0.0, time * 0.4)).g);
         col = mix(col, vec3(0.88, 0.92, 0.88), clamp(foam, 0.0, 1.0) * 0.7);

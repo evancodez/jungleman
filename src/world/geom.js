@@ -142,7 +142,7 @@ export function trunkGeo(x, z, y0, y1, r0, r1, opts = {}) {
       const n = noise3(ca * 1.2 + seed, sa * 1.2, y * 0.18) * 0.12 + noise3(ca * 3 + seed, sa * 3, y * 0.5) * 0.05;
       const rr = r * (1 + n) + lobe + flare * 0.25;
       pos.push(x + ca * rr, y, z + sa * rr);
-      uv.push((j / radial) * Math.max(2, Math.round(r0 * 1.4)), h / 3);
+      uv.push((j / radial) * Math.max(2, Math.round(r0 * 1.6)), h / 4);
     }
   }
   for (let i = 0; i < segsY; i++) {

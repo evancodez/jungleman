@@ -35,9 +35,9 @@ export const P = {
   slopeAccel: 17,
   slideJumpBoost: 1.12,
 
-  grindGravity: 17,
+  grindGravity: 12,
   grindFriction: 0.05,
-  grindMax: 30,
+  grindMax: 24,
   grindJump: 10.8,
 
   swingPump: 12,
@@ -55,5 +55,5 @@ export const P = {
   wallKickUp: 10.5,
 
   swimSpeed: 4.2,
-  maxSpeed: 40,
+  maxSpeed: 34,
 };

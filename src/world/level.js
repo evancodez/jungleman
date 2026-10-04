@@ -57,11 +57,11 @@ export function buildLevel({ visual = true } = {}) {
   deck(ctx, { c: [-36.5, 36, -2.5], size: [7, 7] });
   lookoutRoof(ctx, -37.2, 36, -1.8);
   // Spiral branch wrapping the Great Tree from the lookout down to Deck A.
-  branch(ctx, helix(GT.x, GT.z, 6.3, 129, -350, 35.6, 12.9, 64), { r0: 0.75, r1: 0.5, name: 'Spiral Slide', leaves: true, hangers: true, leafRange: [0.05, 0.7], tipLeaves: false });
+  branch(ctx, helix(GT.x, GT.z, 6.3, 129, -280, 35.6, 14.8, 64), { r0: 0.75, r1: 0.5, name: 'Spiral Slide', leaves: true, hangers: true, leafRange: [0.05, 0.7], tipLeaves: false });
   // Branch stubs supporting the spiral (visual + walkable).
-  for (const a of [60, -60, -180, -300]) {
+  for (const a of [60, -60, -180, -275]) {
     const rad = THREE.MathUtils.degToRad(a);
-    const y = lerp(35.6, 12.9, (129 - a) / 479) - 0.4;
+    const y = lerp(35.6, 14.8, (129 - a) / 409) - 0.4;
     branch(ctx, [V(GT.x + Math.cos(rad) * 3.2, y + 0.6, GT.z + Math.sin(rad) * 3.2), V(GT.x + Math.cos(rad) * 6.3, y, GT.z + Math.sin(rad) * 6.3)], { r0: 0.6, r1: 0.45, grind: false, leaves: false });
   }
   // East Reach: Deck B toward the river (ends near vine V1).
@@ -195,7 +195,7 @@ export function buildLevel({ visual = true } = {}) {
   boulder(ctx, 9, H(9, -80) + 0.6, -80, 2.2);
   boulder(ctx, -9, H(-9, -79) + 0.6, -79, 1.8);
   // Zip vines off the cliff.
-  zipLine(ctx, V(34, H(34, -77) + 3.2, -77), V(45.5, 19.8, -8.5), { name: 'Temple Zip' });
+  zipLine(ctx, V(34, H(34, -77) + 3.2, -77), V(44.8, 19.9, -11.2), { name: 'Temple Zip' });
   zipLine(ctx, V(-38, H(-38, -77) + 3.2, -77), V(-66, H(-66, -49) + 2.8, -49), { name: 'Hill Zip' });
   zipPost(ctx, 34, -77);
   zipPost(ctx, -38, -77);
@@ -210,20 +210,20 @@ export function buildLevel({ visual = true } = {}) {
     const end = MUDSLIDE[MUDSLIDE.length - 1];
     const kx = end[0] + 2.5, kz = end[1] + 2.0;
     const ky = H(kx, kz);
-    solid(ctx, { c: [kx, ky + 0.6, kz], size: [4, 0.5, 6], rotY: THREE.MathUtils.degToRad(42), rotX: -0.42, mat: 'planks', tag: 'wood', tile: 2 });
+    solid(ctx, { c: [kx, ky + 0.9, kz], size: [4.4, 0.5, 6.5], rotY: THREE.MathUtils.degToRad(42), rotX: -0.5, mat: 'planks', tag: 'wood', tile: 2 });
     solid(ctx, { c: [kx + 1.0, ky - 0.6, kz + 1.0], size: [3.6, 2.2, 3], rotY: THREE.MathUtils.degToRad(42), mat: 'wood', tag: 'wood', tile: 2 });
     collectible(ctx, 'idol', V(kx + 11, ky + 8.5, kz + 9), 'Rocket Idol');
     gap(ctx, 'Mud Rocket', 750, [[kx - 5, ky - 2, kz - 5], [kx + 5, ky + 6, kz + 5]], [[-40, -3, 28], [-8, 30, 64]]);
   }
 
   // ================================================================== MUSHROOM GARDEN
-  mushroom(ctx, { x: -33, z: 33, y0: H(-33, 33), top: H(-33, 33) + 3, r: 2.4, bounce: 14 });
-  mushroom(ctx, { x: -24.5, z: 38.5, y0: H(-24.5, 38.5), top: 6.8, r: 2.7, bounce: 15 });
-  mushroom(ctx, { x: -31, z: 47.5, y0: H(-31, 47.5), top: 10.2, r: 2.6, bounce: 15.5 });
-  mushroom(ctx, { x: -21.5, z: 53, y0: H(-21.5, 53), top: 14, r: 3.0, bounce: 16 });
+  mushroom(ctx, { x: -34, z: 32, y0: H(-34, 32), top: H(-34, 32) + 3, r: 2.4, bounce: 14 });
+  mushroom(ctx, { x: -23.6, z: 35.6, y0: H(-23.6, 35.6), top: 6.8, r: 2.7, bounce: 15 });
+  mushroom(ctx, { x: -30, z: 44, y0: H(-30, 44), top: 10.2, r: 2.6, bounce: 15.5 });
+  mushroom(ctx, { x: -22, z: 51.5, y0: H(-22, 51.5), top: 14, r: 3.0, bounce: 16 });
   mushroom(ctx, { x: -13, z: 43, y0: H(-13, 43), top: H(-13, 43) + 4, r: 2.0, bounce: 14 });
   mushroom(ctx, { x: -40, z: 55, y0: H(-40, 55), top: H(-40, 55) + 6, r: 2.2, bounce: 15 });
-  collectible(ctx, 'letter', V(-21.5, 23.5, 53), 'G');
+  collectible(ctx, 'letter', V(-22, 23.5, 51.5), 'G');
   const MT = { x: -13, z: 63 };
   tree(ctx, { ...MT, y0: H(MT.x, MT.z) - 1.5, height: 34, r: 2.3, roots: 4, crownY: 31, crownR: 10, seed: 71 });
   deck(ctx, { c: [-17, 18, 60.5], size: [5, 5] });
@@ -250,7 +250,7 @@ export function buildLevel({ visual = true } = {}) {
   tree(ctx, { ...VT, y0: H(VT.x, VT.z) - 1.5, height: 30, r: 2.0, roots: 4, crownY: 27, crownR: 9, seed: 81 });
   branch(ctx, [V(48.4, 20, 64.5), V(43, 18.2, 58), V(38.5, 15.4, 52), V(35, 13.5, 47.4)], { r0: 0.55, r1: 0.3, name: 'Village Branch' });
   vine(ctx, V(43.3, 18, 58.5), 8);
-  zipLine(ctx, V(44.5, 19.6, -2.5), V(29.6, 10.2, 41), { name: 'Village Zip' });
+  zipLine(ctx, V(44.5, 19.6, -2.5), V(29.3, 14.3, 42.6), { name: 'Village Zip' });
   gap(ctx, 'Hut Hop', 400, [[24, 9, 39], [34, 14, 49]], [[37, 9, 46], [47, 14, 56]]);
 
   // ================================================================== COLLECTIBLES + GAPS
@@ -346,7 +346,18 @@ function waterfallCave(ctx) {
 function decorate(ctx) {
   const R = rng(777);
   const world = ctx.world;
+  const onRoute = (x, z, rad) => {
+    // Keep the mud slide trough and the main ground routes clear.
+    for (let i = 0; i < MUDSLIDE.length - 1; i++) {
+      const [ax, az] = MUDSLIDE[i], [bx, bz] = MUDSLIDE[i + 1];
+      const dx = bx - ax, dz = bz - az;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1);
+      if (Math.hypot(x - ax - dx * t, z - az - dz * t) < 7 + rad) return true;
+    }
+    return Math.hypot(x + 42, z - 34) < 9 + rad; // kicker landing zone
+  };
   const occupied = (x, z, y, rad) => {
+    if (onRoute(x, z, rad)) return true;
     const cs = world.query(x - rad, y - 1, z - rad, x + rad, y + 3, z + rad, []);
     return cs.some((c) => c.tag !== 'rock' || c.type !== 'box' || c.max.y - c.min.y < 50);
   };

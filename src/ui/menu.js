@@ -195,7 +195,7 @@ export class Menus {
   }
 
   showMain() {
-    if (this.titleEl) this.titleEl.querySelector('.press').style.display = 'none';
+    if (this.titleEl) { this.titleEl.querySelector('.press').style.display = 'none'; this.titleEl.classList.add('menu-open'); }
     while (this.stack.length) this.pop();
     const best = this.game.save.bestScore || 0;
     const s = new ListScreen(this, {
@@ -208,7 +208,7 @@ export class Menus {
         { type: 'button', label: 'Settings', action: () => this.showSettings(() => this.pop()) },
         { type: 'button', label: 'Gaps & Secrets', action: () => this.showGaps(() => this.pop()) },
       ],
-      onBack: () => { this.pop(); if (this.titleEl) this.titleEl.querySelector('.press').style.display = ''; },
+      onBack: () => { this.pop(); if (this.titleEl) { this.titleEl.querySelector('.press').style.display = ''; this.titleEl.classList.remove('menu-open'); } },
       footer: `<div class="small-note">Score Attack best: <b>${fmt(best)}</b></div>`,
     });
     s.el.classList.remove('dim');

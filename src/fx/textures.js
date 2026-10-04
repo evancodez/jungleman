@@ -42,21 +42,22 @@ function makeFbm(freq, octaves, seed) {
 }
 
 // Voronoi (tileable) returning distance to nearest and second nearest.
-function makeVoronoi(cells, seed) {
+function makeVoronoi(cells, seed, cellsY = cells, stretch = 1) {
   const r = rng(seed);
   const pts = [];
-  for (let j = 0; j < cells; j++) for (let i = 0; i < cells; i++) pts.push([(i + r()) / cells, (j + r()) / cells, r()]);
+  const cx = cells, cy = cellsY;
+  for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) pts.push([(i + r()) / cx, (j + r()) / cy, r()]);
   return (u, v) => {
-    const ci = Math.floor(u * cells), cj = Math.floor(v * cells);
+    const ci = Math.floor(u * cx), cj = Math.floor(v * cy);
     let d1 = 9, d2 = 9, id = 0;
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
-      const ii = (ci + di + cells) % cells, jj = (cj + dj + cells) % cells;
-      const p = pts[jj * cells + ii];
-      const px = p[0] + Math.floor((ci + di) / cells), py = p[1] + Math.floor((cj + dj) / cells);
-      const d = Math.hypot(u - px, v - py);
+      const ii = (ci + di + cx) % cx, jj = (cj + dj + cy) % cy;
+      const p = pts[jj * cx + ii];
+      const px = p[0] + Math.floor((ci + di) / cx), py = p[1] + Math.floor((cj + dj) / cy);
+      const d = Math.hypot((u - px) * cx, (v - py) * cx * stretch);
       if (d < d1) { d2 = d1; d1 = d; id = p[2]; } else if (d < d2) d2 = d;
     }
-    return [d1 * cells, d2 * cells, id];
+    return [d1, d2, id];
   };
 }
 
@@ -130,27 +131,33 @@ function pair(result, strength) {
 
 // ------------------------------------------------------------ generators
 function barkTex(size) {
+  // Furrowed bark: vertically elongated plates separated by deep, wandering furrows.
   const n1 = makeFbm(4, 5, 11);
   const n2 = makeFbm(16, 3, 12);
   const n3 = makeFbm(2, 3, 13);
+  const vor = makeVoronoi(9, 14, 3, 0.35);
+  const vor2 = makeVoronoi(18, 15, 5, 0.4);
   return paint(size, (u, v, o) => {
-    // Vertical grooves warped by noise.
-    const warp = n1(u, v) * 0.35 + n3(u, v * 0.5) * 0.2;
-    const g = Math.sin((u * 14 + warp * 3) * Math.PI * 2);
-    const groove = Math.pow(Math.abs(g), 0.6);
-    const fine = n2(u * 1, v * 0.25);
-    const h = groove * 0.7 + fine * 0.25 + n1(u, v) * 0.2;
-    const tint = n3(u, v);
-    const base = 0.24 + h * 0.18;
-    o[0] = base * 1.02 + tint * 0.02;
-    o[1] = base * 0.84 + tint * 0.03 + 0.01;
-    o[2] = base * 0.62;
-    // Dark crevices.
-    const crev = smoothstep(0.35, 0.0, groove);
-    o[0] *= 1 - crev * 0.55; o[1] *= 1 - crev * 0.55; o[2] *= 1 - crev * 0.5;
-    // Lichen speckles.
-    const lich = smoothstep(0.55, 0.75, n2(u * 2 + 0.3, v * 2));
-    o[0] = lerp(o[0], 0.5, lich * 0.35); o[1] = lerp(o[1], 0.55, lich * 0.35); o[2] = lerp(o[2], 0.42, lich * 0.35);
+    const wu = u + n1(u, v) * 0.025;
+    const [a1, a2, id] = vor(wu, v);
+    const [b1, b2] = vor2(wu + 0.5, v);
+    const plate = smoothstep(0.0, 0.22, a2 - a1);
+    const sub = smoothstep(0.0, 0.18, b2 - b1);
+    const fiber = n2(u * 1, v * 0.2) * 0.5 + 0.5;
+    // Long vertical ridges, irregular and wandering.
+    const warp = n1(u, v) * 0.55 + n3(u, v * 0.5) * 0.35;
+    const ridge = 1 - Math.pow(Math.abs(Math.sin((u * 7 + warp * 1.6) * Math.PI * 2)), 0.6);
+    const h = ridge * 0.4 + plate * 0.35 + sub * 0.1 + fiber * 0.15 + n1(u, v) * 0.08;
+    const tint = n3(u, v) * 0.5 + 0.5;
+    const base = 0.15 + ridge * 0.09 + plate * 0.08 + sub * 0.03 + fiber * 0.04 + id * 0.02;
+    o[0] = base * (1.05 + tint * 0.05);
+    o[1] = base * (0.9 + tint * 0.04);
+    o[2] = base * 0.7;
+    // Lichen and green algae streaks on the plates.
+    const lich = smoothstep(0.62, 0.8, n2(u * 2 + 0.3, v * 2)) * plate;
+    o[0] = lerp(o[0], 0.5, lich * 0.4); o[1] = lerp(o[1], 0.54, lich * 0.4); o[2] = lerp(o[2], 0.42, lich * 0.4);
+    const alg = smoothstep(0.35, 0.75, n3(u + 0.4, v * 0.6)) * (1 - plate * 0.5);
+    o[0] = lerp(o[0], 0.12, alg * 0.35); o[1] = lerp(o[1], 0.2, alg * 0.35); o[2] = lerp(o[2], 0.07, alg * 0.35);
     o[4] = h;
   });
 }
@@ -211,10 +218,10 @@ function rockTex(size) {
   const vor = makeVoronoi(6, 43);
   return paint(size, (u, v, o) => {
     const [d1, d2] = vor(u, v);
-    const ridge = smoothstep(0.0, 0.18, d2 - d1);
+    const ridge = smoothstep(0.0, 0.18, d2 - d1 + n1(u * 2, v * 2) * 0.12);
     const nn = n1(u, v), fine = n2(u, v);
-    const h = ridge * 0.5 + nn * 0.4 + fine * 0.15;
-    const base = 0.36 + nn * 0.12 + fine * 0.05;
+    const h = ridge * 0.35 + nn * 0.5 + fine * 0.2;
+    const base = 0.34 + nn * 0.14 + fine * 0.06;
     o[0] = base * 0.98; o[1] = base * 0.93; o[2] = base * 0.82;
     o[0] *= 0.75 + ridge * 0.25; o[1] *= 0.75 + ridge * 0.25; o[2] *= 0.75 + ridge * 0.25;
     o[4] = h;

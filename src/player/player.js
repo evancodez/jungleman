@@ -83,6 +83,7 @@ export class Player {
     this.autoGrind = false;
     this.speedLines = 0;
     this.preWallVel = { x: 0, z: 0 };
+    this.slideEndTime = -10;
   }
 
   // ---------------------------------------------------------------- helpers
@@ -180,6 +181,10 @@ export class Player {
         if (ny > 0.62) {
           if (!groundBest || ny > groundBest.ny) groundBest = c;
           this.hitGround = true;
+          // Resolve walkable contacts straight up so standing on slopes never creeps downhill.
+          p.y += Math.min(depth / ny, depth * 2) + 0.0005;
+          if (v.y < 0) v.y = 0;
+          continue;
         } else if (ny < -0.55) {
           this.hitCeil = true;
         } else {
@@ -287,6 +292,7 @@ export class Player {
       // Stand up only if there is headroom.
       if (this.world.capsuleFree(this.pos, P.radius, P.height, 0.05)) {
         this.sliding = false;
+        this.slideEndTime = this.time;
         this.height = P.height;
         this.emit('slideEnd', {});
       }
@@ -474,7 +480,7 @@ export class Player {
       this.yaw = Math.atan2(this.inputDir.x, this.inputDir.z);
       name = 'Skid Flip';
       this.startFlip('back', true);
-    } else if (this.sliding && hs > 5) {
+    } else if ((this.sliding || this.time - this.slideEndTime < 0.15) && hs > 5) {
       const boost = Math.min(hs * P.slideJumpBoost, hs + 3);
       v.x *= boost / hs; v.z *= boost / hs;
       vy *= 0.9;
@@ -645,7 +651,7 @@ export class Player {
     if (this.spin.active) {
       const holding = inp.held(this.spin.dir > 0 ? 'spinL' : 'spinR');
       if (holding && this.spin.target - this.spin.angle < 0.6) this.spin.target += Math.PI; // keep spinning in half turns
-      const rate = TAU / 0.5;
+      const rate = TAU / 0.44;
       this.spin.angle = Math.min(this.spin.target, this.spin.angle + rate * dt);
       if (this.spin.angle >= this.spin.target - 1e-4) {
         // Only full rotations land you facing forward; round up to a full turn.
@@ -690,7 +696,8 @@ export class Player {
   }
   completeSpin(landed) {
     const s = this.spin;
-    const deg = Math.round((landed ? s.angle : s.target) / Math.PI) * 180;
+    // Landing a little short of a half turn still counts (generous).
+    const deg = Math.floor(((landed ? s.angle : s.target) + 0.6) / Math.PI) * 180;
     if (deg >= 360) this.emit('trick', { name: `${deg} Spin`, base: deg * 0.9, kind: 'spin' });
     s.active = false;
     s.angle = 0;
@@ -1185,7 +1192,14 @@ export class Player {
       if (rail.oneWay) { this.exitRail(false); return; }
     }
     if (Math.abs(t.y) < 0.15 && g.speed < rail.minSpeed * 0.7) g.speed = approach(g.speed, rail.minSpeed * 0.7, 4 * dt);
+    // Above cruising speed, grinds bleed speed a little faster (keeps long descents sane).
+    if (g.speed > 16) g.speed -= (g.speed - 16) * 0.35 * dt;
     g.speed = Math.min(g.speed, P.grindMax);
+    if (rail.hang) {
+      // Zip vines brake near the end so you can stick the landing.
+      const remaining = g.dir > 0 ? rail.length - g.s : g.s;
+      if (remaining < 9) g.speed = approach(g.speed, 6.5, 16 * dt);
+    }
     const ds = g.dir * g.speed * dt;
     g.s += ds;
     g.dist += Math.abs(ds);
@@ -1285,7 +1299,7 @@ export class Player {
       this.jumpCut = true;
       this.emit('jump', { name: rail.hang ? 'Zip Drop' : 'Rail Hop', kind: 'rail', pos: this.pos });
     } else {
-      if (!rail.hang) v.y = Math.max(v.y, 0) + (hop ? 4 : 1.2);
+      if (!rail.hang) v.y += hop ? 4 : 0.8;
       this.jumpCut = false;
     }
     this.emit('grindEnd', { rail, dist: g.dist });

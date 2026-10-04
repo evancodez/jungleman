@@ -180,6 +180,19 @@ async function boot() {
     if (!locked && game.mode === 'playing' && game.input.lastDevice === 'kbm') pause(game);
   };
   window.addEventListener('keydown', () => audio.unlock(), { once: false });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(game); });
+  window.addEventListener('blur', () => { if (game.input.lastDevice === 'kbm') pause(game); });
+  // Gamepad-only players: browsers may need a click/key before audio can start.
+  const audioHint = document.createElement('div');
+  audioHint.className = 'lockhint';
+  audioHint.textContent = 'Click or press any key to enable sound';
+  audioHint.style.display = 'none';
+  uiRoot.appendChild(audioHint);
+  setInterval(() => {
+    const blocked = !audio.ctx || audio.ctx.state !== 'running';
+    audioHint.style.display = blocked && game.mode !== 'title' && game.input.lastDevice === 'gamepad' ? '' : 'none';
+    if (audio.ctx && audio.ctx.state === 'suspended' && game.input.lastDevice === 'gamepad') audio.ctx.resume().catch(() => {});
+  }, 1000);
   window.addEventListener('keydown', (e) => { if (e.code === 'F3') { game.showFps = !game.showFps; e.preventDefault(); } });
 
   // ------------------------------------------------------------------ event -> feedback

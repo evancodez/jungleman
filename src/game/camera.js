@@ -58,10 +58,20 @@ export class CameraRig {
     const hs = player.hspeed;
     const speed = player.speed;
 
+    // Trunk runs force a readable framing regardless of auto-cam.
+    if (st === 'wallrun' && player.wall.type !== 'flat' && this.idleLook > 0.25) {
+      const w = player.wall;
+      const ox = Math.cos(w.theta), oz = Math.sin(w.theta);
+      const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw);
+      const k = w.type === 'up' ? 0.25 : 0.75;
+      this.yaw = dampAngle(this.yaw, Math.atan2(ox - fx * k, oz - fz * k), 5, dt);
+      this.pitch = lerp(this.pitch, w.type === 'up' ? -0.1 : 0.2, dampT(3, dt));
+    }
     // ---- auto follow (THPS-style): swing the camera behind the motion.
     if (this.settings.autoCam && this.idleLook > 0.7) {
       let want = null, rate = 0;
-      if (st === 'grind' || st === 'wallrun') { want = player.yaw + Math.PI; rate = 3.2; }
+      if (st === 'wallrun' && player.wall.type !== 'flat') { /* framed above */ }
+      else if (st === 'grind' || st === 'wallrun') { want = player.yaw + Math.PI; rate = 3.2; }
       else if (st === 'swing') { if (hs > 3) { want = Math.atan2(player.vel.x, player.vel.z) + Math.PI; rate = 1.2; } }
       else if (st === 'climb') { want = player.yaw + Math.PI; rate = 1.5; }
       else if (hs > 4) { want = Math.atan2(player.vel.x, player.vel.z) + Math.PI; rate = clamp((hs - 4) * 0.18, 0.4, 2.4); }
@@ -128,6 +138,7 @@ export class CameraRig {
     cam.position.x += Math.sin(this.shakeT * 47) * sa;
     cam.position.y += Math.sin(this.shakeT * 61 + 1) * sa;
     cam.lookAt(this.smoothTarget);
+    this.tooClose = this.collDist < 0.9;
     if (cam.fov !== this.fov) { cam.fov = this.fov; cam.updateProjectionMatrix(); }
   }
 
