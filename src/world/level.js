@@ -214,7 +214,8 @@ export function buildLevel({ visual = true } = {}) {
     const ky = H(kx, kz);
     solid(ctx, { c: [kx, ky + 0.9, kz], size: [4.4, 0.5, 6.5], rotY: THREE.MathUtils.degToRad(42), rotX: -0.5, mat: 'planks', tag: 'wood', tile: 2 });
     solid(ctx, { c: [kx + 1.0, ky - 0.6, kz + 1.0], size: [3.6, 2.2, 3], rotY: THREE.MathUtils.degToRad(42), mat: 'wood', tag: 'wood', tile: 2 });
-    collectible(ctx, 'idol', V(kx + 11, ky + 8.5, kz + 9), 'Rocket Idol');
+    // On the launch arc you only reach by jumping off the kicker lip.
+    collectible(ctx, 'idol', V(-38.2, 7.0, 37.0), 'Rocket Idol');
     gap(ctx, 'Mud Rocket', 750, [[kx - 5, ky - 2, kz - 5], [kx + 5, ky + 6, kz + 5]], [[-40, -3, 28], [-8, 30, 64]]);
   }
 

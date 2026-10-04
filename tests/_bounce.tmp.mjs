@@ -1,15 +1,21 @@
 import * as THREE from 'three';
 import { makeGame, run } from './helpers.js';
-const g = makeGame();
-const W = g.game.world;
-const cap = W.colliders.find(c=>c.bounce>0 && Math.abs(c.x+18.6)<0.1);
-const trunk = W.colliders.find(c=>c.type==='cyl'&&c.climbable&&Math.abs(c.x+32)<0.1);
-g.player.placeAt(new THREE.Vector3(cap.x-0.5, cap.y1+1.5, cap.z), -Math.PI/2);
-g.player.vel.set(-5, 0, 0.8);
-const dir=[trunk.x-cap.x, trunk.z-cap.z];
-g.input.moveY = 1;
-let climbed=false;
-run(g, 3, { dir, each:(c)=>{ if(c.player.state==='climb'||c.player.state==='wallrun'){ climbed=true; } if (climbed && c.player.state==='climb') { c.input.moveY=-1; } } });
-const ev = g.log.filter(e=>['bounce','state','climb','wallrun','land'].includes(e.name)).map(e=>`${e.t.toFixed(2)} ${e.name} ${e.name==='state'?e.data.from+'->'+e.data.to:''}${e.name==='bounce'?' col.x='+e.data.col.x.toFixed(1)+' y='+e.data.pos.y.toFixed(2)+' groundY='+W.terrain.heightAt(e.data.pos.x,e.data.pos.z).toFixed(2):''}`);
-console.log(ev.join('\n'));
-console.log('final', g.player.state, g.player.pos.toArray().map(v=>v.toFixed(2)), 'dist from trunk axis', Math.hypot(g.player.pos.x-trunk.x, g.player.pos.z-trunk.z).toFixed(2));
+const W0 = makeGame().game.world;
+const cap = W0.colliders.find(c=>c.bounce>0 && Math.abs(c.x+18.6)<0.1);
+const trunk = W0.colliders.find(c=>c.type==='cyl'&&c.climbable&&Math.abs(c.x+32)<0.1);
+const dx=trunk.x-cap.x, dz=trunk.z-cap.z, L=Math.hypot(dx,dz), ux=dx/L, uz=dz/L;
+for (const sp of [3,4,5,6,7]) {
+  const g = makeGame();
+  const W = g.game.world;
+  g.player.placeAt(new THREE.Vector3(cap.x-ux*1.5, cap.y1+0.8, cap.z-uz*1.5), Math.atan2(ux,uz));
+  g.player.vel.set(ux*sp, 0, uz*sp);
+  g.input.moveY = 1;
+  let phase=0; const out=[];
+  run(g, 6, { dir:[ux,uz], each:(c)=>{
+    const p=c.player;
+    if (phase===0 && (p.state==='climb')) { phase=1; c.input.moveY=-1; out.push(`climb at y=${p.pos.y.toFixed(2)} t=${c.input.time.toFixed(2)}`); }
+    if (phase===1 && p.state!=='climb') { phase=2; c.input.moveY=0; out.push(`left climb -> ${p.state} at y=${p.pos.y.toFixed(2)} groundCol.bounce=${p.groundCol?.bounce} t=${c.input.time.toFixed(2)}`); }
+  }});
+  const b = g.log.filter(e=>e.name==='bounce').map(e=>`bounce t=${e.t.toFixed(2)} col=(${e.data.col.x},${e.data.col.z})`);
+  console.log('speed',sp, out.join(' | '), '\n   ', b.join(' ; '), '\n    final', g.player.state, g.player.pos.toArray().map(v=>v.toFixed(1)).join(','));
+}
