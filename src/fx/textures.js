@@ -227,9 +227,10 @@ function rockTex(size) {
     const [d1, d2] = vor(u + nn * 0.05, v);
     const crack = smoothstep(0.05, 0.0, d2 - d1) * smoothstep(-0.1, 0.3, fine);
     const pit = smoothstep(0.35, 0.6, fine) * 0.3;
-    const h = 0.55 + nn * 0.35 - layer * 0.25 - crack * 0.45 - pit * 0.3 + band * 0.1;
-    const base = 0.32 + nn * 0.1 + band * 0.07 + fine * 0.04;
-    o[0] = base * 1.0 - layer * 0.05; o[1] = base * 0.95 - layer * 0.05; o[2] = base * 0.84 - layer * 0.04;
+    const mottle = n2(u * 0.5 + 0.3, v * 0.5) * 0.5 + 0.5;
+    const h = 0.55 + nn * 0.4 - layer * 0.1 - crack * 0.45 - pit * 0.3 + band * 0.08 + mottle * 0.1;
+    const base = 0.3 + nn * 0.12 + band * 0.05 + fine * 0.05 + mottle * 0.05;
+    o[0] = base * 1.0 - layer * 0.02; o[1] = base * 0.95 - layer * 0.02; o[2] = base * 0.86 - layer * 0.015;
     o[0] *= 1 - crack * 0.45; o[1] *= 1 - crack * 0.45; o[2] *= 1 - crack * 0.42;
     // Warm iron staining.
     const stain = smoothstep(0.2, 0.6, big + fine * 0.3) * 0.18;
