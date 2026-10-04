@@ -58,6 +58,7 @@ export class Input {
     this.mouseDY = 0;
     this.wheel = 0;
     this.pointerLocked = false;
+    this.noLock = false;
     this.lastDevice = 'kbm';
     this.padType = 'ps'; // 'ps' | 'xbox'
     this.padConnected = false;
@@ -86,7 +87,7 @@ export class Input {
     target.addEventListener('mousedown', (e) => this._onMouse(e, true));
     window.addEventListener('mouseup', (e) => this._onMouse(e, false));
     window.addEventListener('mousemove', (e) => {
-      if (this.pointerLocked || (this.gameplayActive && this.mouseButtons.has('Mouse1drag'))) {
+      if (this.pointerLocked || (this.gameplayActive && (this.noLock || this.mouseButtons.has('Mouse1drag')))) {
         this.mouseDX += e.movementX || 0;
         this.mouseDY += e.movementY || 0;
       }
@@ -94,21 +95,30 @@ export class Input {
     });
     window.addEventListener('wheel', (e) => { this.wheel += Math.sign(e.deltaY); }, { passive: true });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('pointerlockerror', () => { this.noLock = true; });
     document.addEventListener('pointerlockchange', () => {
       this.pointerLocked = document.pointerLockElement === this.target;
+      if (this.pointerLocked) this.noLock = false;
       if (this.onPointerLockChange) this.onPointerLockChange(this.pointerLocked);
     });
     window.addEventListener('gamepadconnected', () => { this.lastDevice = 'gamepad'; });
   }
 
   requestPointerLock() {
-    if (this.pointerLocked || !this.target.requestPointerLock) return;
+    if (this.pointerLocked) return;
+    // Without pointer lock (sandboxed iframes, some browsers) the camera still
+    // follows plain mouse movement while the cursor is over the game.
+    const fallback = () => { this.noLock = true; };
+    if (!this.target.requestPointerLock) { fallback(); return; }
     try {
       const p = this.target.requestPointerLock({ unadjustedMovement: true });
       if (p && p.catch) p.catch(() => {
-        try { const q = this.target.requestPointerLock(); if (q && q.catch) q.catch(() => {}); } catch { /* ignore */ }
+        try {
+          const q = this.target.requestPointerLock();
+          if (q && q.catch) q.catch(fallback);
+        } catch { fallback(); }
       });
-    } catch { /* pointer lock not available (e.g. sandboxed iframe) */ }
+    } catch { fallback(); }
   }
   exitPointerLock() {
     if (document.pointerLockElement) document.exitPointerLock();

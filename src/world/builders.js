@@ -198,7 +198,7 @@ export function solid(ctx, o) {
   if (o.collide !== false) ctx.world.add(col);
   if (ctx.visual && o.visible !== false) {
     const seg = o.rocky ? 1.2 : 4;
-    const g = boxGeo(w, h, d, o.tile ?? 2.5, { sx: Math.max(1, Math.round(w / seg)), sy: Math.max(1, Math.round(h / seg)), sz: Math.max(1, Math.round(d / seg)) });
+    const g = boxGeo(w, h, d, o.tile ?? 2.5, { sx: Math.max(1, Math.round(w / seg)), sy: Math.max(1, Math.round(h / seg)), sz: Math.max(1, Math.round(d / seg)), swapUV: o.swapUV });
     _m.compose(c, q, V(1, 1, 1));
     g.applyMatrix4(_m);
     if (o.rocky) rockyDisplace(g, o.rocky === true ? 0.45 : o.rocky);
@@ -434,7 +434,7 @@ export function hut(ctx, o) {
   const th = 0.25;
   const wall = (lx, lz, lw, ld) => {
     const c = local(lx, wallH / 2, lz);
-    solid(ctx, { c: [c.x, c.y, c.z], size: [lw, wallH, ld], rotY: rot, mat: 'planks', tag: 'wood', tile: 2, wallRun: false, aoBase: y });
+    solid(ctx, { c: [c.x, c.y, c.z], size: [lw, wallH, ld], rotY: rot, mat: 'planks', tag: 'wood', tile: 2.6, wallRun: false, aoBase: y, swapUV: true });
   };
   wall(0, -d / 2 + th / 2, w, th);
   wall(-w / 2 + th / 2, 0, th, d);

@@ -114,6 +114,25 @@ export class Game {
   }
 
   saveSettings() { saveSettings(this.settings); this.applySettings(); }
+
+  /** Apply what can change live (resolution, shadows, bloom); the rest applies on reload. */
+  applyQuality() {
+    const q = resolveQuality(this.settings.quality);
+    const old = this.quality;
+    this.quality = { ...q, textures: old.textures, foliage: old.foliage, terrainRes: old.terrainRes, msaa: old.msaa };
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
+    if (q.shadowMap !== old.shadowMap || q.shadowRange !== old.shadowRange) {
+      const sh = this.sun.shadow;
+      sh.mapSize.set(q.shadowMap, q.shadowMap);
+      const R = q.shadowRange;
+      Object.assign(sh.camera, { left: -R, right: R, top: R, bottom: -R });
+      sh.camera.updateProjectionMatrix();
+      if (sh.map) { sh.map.dispose(); sh.map = null; }
+    }
+    this.post.bloom.enabled = q.bloom;
+    this.levelView.setTorchLights(q.torchLights);
+    this.onResize();
+  }
   writeSave() { writeSave(this.save); }
 
   onResize() {

@@ -266,7 +266,7 @@ export class Menus {
       { type: 'button', label: 'Reset Collectibles & Gaps', action: () => this.confirm('Reset all collectibles, gaps and best score?', () => { this.hooks.resetProgress(); }) },
       { type: 'button', label: 'Back', action: () => onBack() },
     ];
-    screen = new ListScreen(this, { title: 'Settings', items, onBack, footer: '<div class="small-note">Quality changes to textures and foliage density apply on next launch.</div>' });
+    screen = new ListScreen(this, { title: 'Settings', items, onBack, footer: '<div class="small-note">Quality: resolution, shadows and bloom change instantly; texture detail, foliage density and anti-aliasing apply on next launch.</div>' });
     this.push(screen);
   }
 

@@ -59,7 +59,8 @@ export function boxGeo(w, h, d, tile = 2, opts = {}) {
     if (nx > 0.5) { u = z; v = y; }
     else if (ny > 0.5) { u = x; v = z; }
     else { u = x; v = y; }
-    uv.setXY(i, u / tile, v / tile);
+    if (opts.swapUV) uv.setXY(i, v / tile, u / tile);
+    else uv.setXY(i, u / tile, v / tile);
   }
   return g;
 }

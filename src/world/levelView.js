@@ -227,6 +227,19 @@ export class LevelView {
     }
   }
 
+  setTorchLights(n) {
+    while (this.torchLights.length < n) {
+      const l = new THREE.PointLight(0xff9a40, 0, 14, 1.6);
+      this.group.add(l);
+      this.torchLights.push(l);
+    }
+    while (this.torchLights.length > n) {
+      const l = this.torchLights.pop();
+      this.group.remove(l);
+      l.dispose();
+    }
+  }
+
   buildShafts() {
     const T = this.T;
     const mat = new THREE.MeshBasicMaterial({ map: T.shaft, color: 0xfff1c8, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });

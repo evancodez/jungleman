@@ -84,6 +84,14 @@ export class Hud {
     el[prop] = value;
   }
 
+  banner(title, sub) {
+    const d = document.createElement('div');
+    d.className = 'banner';
+    d.innerHTML = `<div class="bt">${title}</div><div class="bs">${sub}</div>`;
+    this.el.appendChild(d);
+    setTimeout(() => d.remove(), 4200);
+  }
+
   popup(text, cls) {
     const d = document.createElement('div');
     d.className = 'pop ' + cls;

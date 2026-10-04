@@ -91,7 +91,7 @@ async function boot() {
     resume: () => resume(),
     restart: (toSpawn) => { game.player.respawn(toSpawn); game.rig.reset(game.player); resume(); },
     quitToTitle: () => toTitle(),
-    onSettingsChanged: () => game.applySettings(),
+    onSettingsChanged: (key) => { game.applySettings(); if (key === 'quality') game.applyQuality(); },
     resetProgress: () => {
       game.save.gaps = []; game.save.bestScore = 0;
       game.combo.gapsFound.clear();
@@ -118,6 +118,9 @@ async function boot() {
     game.input.gameplayActive = true;
     S.timer = ATTACK_TIME;
     if (game.input.lastDevice === 'kbm') game.input.requestPointerLock();
+    const c = game.collectibles.counts();
+    if (attack) game.hud.banner('SCORE ATTACK', 'Two minutes. Chain everything. Land your combos.');
+    else game.hud.banner('FREE ROAM', `Letters ${c.letters.length}/${c.lettersTotal} · Idols ${c.idols}/${c.idolsTotal} · Gaps ${game.combo.gapsFound.size}/${game.level.ctx.gaps.length}`);
   }
   function pause(g) {
     if (g.mode !== 'playing') return;
@@ -177,7 +180,7 @@ async function boot() {
     if (game.mode === 'playing' && !game.input.pointerLocked) game.input.requestPointerLock();
   });
   game.input.onPointerLockChange = (locked) => {
-    if (!locked && game.mode === 'playing' && game.input.lastDevice === 'kbm') pause(game);
+    if (!locked && game.mode === 'playing' && game.input.lastDevice === 'kbm' && !game.input.noLock) pause(game);
   };
   window.addEventListener('keydown', () => audio.unlock(), { once: false });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(game); });
