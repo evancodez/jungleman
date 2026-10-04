@@ -40,6 +40,7 @@ screen, and `?fps` shows a frame counter (F3 toggles it in game).
 | Spin left / right (in air) | Q / E | L1 / R1 |
 | Reset camera | V or middle mouse | R3 |
 | Jungle call (taunt) | G | L3 |
+| Cycle trick scoring (Full / Names / Off) | H | Touchpad |
 | Respawn at start | T | Create |
 | Pause | Esc / P | Options |
 
@@ -80,8 +81,8 @@ D-pad/left stick + ✕/○.
 
 ## Scoring (optional)
 
-Settings → *Trick Scoring* has three options: **Full** (points, multiplier, combo), **Names Only**
-(trick names, no numbers) or **Off** (a clean screen).
+Settings → *Trick Scoring* (or H / the touchpad in game) cycles three options: **Full** (points,
+multiplier, combo), **Names Only** (trick names, no numbers) or **Off** (a clean screen).
 
 Each trick adds base points and +1 to the multiplier, and repeating a trick within a combo is
 worth less each time. The combo stays alive while you're in the air, grinding, swinging,

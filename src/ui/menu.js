@@ -295,7 +295,7 @@ export class Menus {
     const rows = [
       ['Move', 'move'], ['Camera', 'look'], ['Jump (hold for height)', 'jump'], ['Grab: grind / vine / zip / climb', 'grab'],
       ['Flip trick (stick picks direction)', 'trick'], ['Slide · Roll on landing · Air pose (hold)', 'slide'],
-      ['Spin left / right (air)', 'spinL'], ['', 'spinR'], ['Reset camera', 'camReset'], ['Jungle call (taunt)', 'taunt'], ['Respawn at start', 'respawn'], ['Pause', 'pause'],
+      ['Spin left / right (air)', 'spinL'], ['', 'spinR'], ['Reset camera', 'camReset'], ['Jungle call (taunt)', 'taunt'], ['Cycle trick scoring', 'scoring'], ['Respawn at start', 'respawn'], ['Pause', 'pause'],
     ];
     void i;
     let html = '<div class="controls-grid"><div class="h">Action</div><div class="h">Keyboard &amp; Mouse</div><div class="h">PS5 Controller</div>';

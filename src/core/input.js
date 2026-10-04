@@ -13,6 +13,7 @@ const KEY_BINDS = {
   camReset: ['KeyV', 'Mouse1'],
   respawn: ['KeyT'],
   taunt: ['KeyG'],
+  scoring: ['KeyH'],
 };
 
 // Standard Gamepad mapping (Chrome/Edge/Safari, Firefox on Windows).
@@ -39,6 +40,7 @@ const PAD_BINDS = {
   camReset: ['r3'],
   respawn: ['create'],
   taunt: ['l3'],
+  scoring: ['pad'],
 };
 
 const NAV_KEYS = {
@@ -341,14 +343,14 @@ function radialDeadzone(x, y, dz) {
 export const GLYPHS = {
   kbm: {
     jump: 'Space', grab: 'LMB / F', trick: 'RMB / R', slide: 'Shift', spinL: 'Q', spinR: 'E',
-    pause: 'Esc', camReset: 'V', respawn: 'T', taunt: 'G', move: 'WASD', look: 'Mouse',
+    pause: 'Esc', camReset: 'V', respawn: 'T', taunt: 'G', scoring: 'H', move: 'WASD', look: 'Mouse',
   },
   ps: {
     jump: '✕', grab: '△', trick: '□', slide: '○', spinL: 'L1', spinR: 'R1',
-    pause: 'OPTIONS', camReset: 'R3', respawn: 'CREATE', taunt: 'L3', move: 'L-Stick', look: 'R-Stick',
+    pause: 'OPTIONS', camReset: 'R3', respawn: 'CREATE', taunt: 'L3', scoring: 'TOUCHPAD', move: 'L-Stick', look: 'R-Stick',
   },
   xbox: {
     jump: 'A', grab: 'Y', trick: 'X', slide: 'B', spinL: 'LB', spinR: 'RB',
-    pause: 'MENU', camReset: 'RS', respawn: 'VIEW', taunt: 'LS', move: 'L-Stick', look: 'R-Stick',
+    pause: 'MENU', camReset: 'RS', respawn: 'VIEW', taunt: 'LS', scoring: '—', move: 'L-Stick', look: 'R-Stick',
   },
 };

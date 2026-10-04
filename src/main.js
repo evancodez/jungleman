@@ -51,6 +51,13 @@ async function boot() {
     update(g, dt, realDt) {
       g.particles.setScale(window.innerHeight, g.camera.fov);
       const playing = g.mode === 'playing';
+      if (playing && g.input.pressed('scoring')) {
+        g.input.consume('scoring');
+        const order = ['full', 'names', 'off'];
+        g.settings.scoring = order[(order.indexOf(g.settings.scoring) + 1) % order.length];
+        g.saveSettings();
+        g.hud.popup(`Scoring: ${{ full: 'Full', names: 'Names Only', off: 'Off' }[g.settings.scoring]}`, 'med');
+      }
       if (playing) {
         g.combo.update(dt);
         g.collectibles.update(dt, g.time);
