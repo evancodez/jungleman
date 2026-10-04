@@ -298,7 +298,7 @@ export class Menus {
     };
     const kb = (a) => K[a].split(' / ').map((x) => `<span class="g">${x}</span>`).join(' ');
     const rows = [
-      ['Move', 'move'], ['Camera', 'look'], ['Jump (hold for height)', 'jump'], ['Grab: grind / vine / zip / climb', 'grab'],
+      ['Move', 'move'], ['Camera', 'look'], ['Jump (hold for height)', 'jump'], ['Grab: grind / far vine catch / zip / climb', 'grab'],
       ['Flip trick (stick picks direction)', 'trick'], ['Slide · Roll on landing · Air pose (hold)', 'slide'],
       ['Spin left / right (air)', 'spinL'], ['', 'spinR'], ['Reset camera', 'camReset'], ['Jungle call (taunt)', 'taunt'], ['Cycle trick scoring', 'scoring'], ['Respawn at start', 'respawn'], ['Pause', 'pause'],
     ];
@@ -307,10 +307,10 @@ export class Menus {
     for (const [label, a] of rows) html += `<div>${label}</div><div class="k">${kb(a)}</div><div class="k">${ps(a)}</div>`;
     html += '</div>';
     html += `<div class="tips">
-      <b>Grind</b> — tap or hold Grab near a branch, rope, railing or ledge. Downhill builds speed; jump at the end to keep it.<br>
-      <b>Swing</b> — Grab a vine in the air, push the stick to pump, release with Jump at the top of the arc for big air.<br>
-      <b>Trees</b> — jump into a trunk head-on to run up it, at an angle to spiral around it. Jump to kick off.<br>
-      <b>Momentum</b> — hold Slide when landing to roll and keep speed; slide-jump for a long jump. Mushrooms bounce you (hold Jump for more).<br>
+      <b>Branches</b> — land on a branch or log to run along it. Press Grab (or Slide) to grind it; downhill builds speed. Hold the stick across it to step off.<br>
+      <b>Vines</b> — touch a vine in the air to catch it. Push the stick through the bottom of the arc to pump, release with Jump on the upswing.<br>
+      <b>Trees</b> — run into a trunk to run up it; climbing up to a branch pulls you onto it. Run a branch into its trunk to grab on. Jump to kick off.<br>
+      <b>Momentum</b> — hold Slide when landing to roll and keep speed; slide-jump for a long jump. Mushrooms bounce you up to the decks (hold Jump for more).<br>
       <b>Combos</b> — chain moves without touching the ground for long. Landing a flip half-way = bail!
     </div>`;
     return html;

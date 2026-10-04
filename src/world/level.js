@@ -111,7 +111,7 @@ export function buildLevel({ visual = true } = {}) {
 
   // ================================================================== RING TREES
   for (const T of [T1, T2, T3, T4, T5]) {
-    tree(ctx, { x: T.x, z: T.z, y0: H(T.x, T.z) - 1.5, height: T.deck + 17, r: T.r, rTop: T.r * 0.8, roots: 4, crownY: T.deck + 14, crownR: 9, seed: Math.floor(T.x * 7 + T.z * 3), name: T.name, buttress: 1.4 });
+    tree(ctx, { x: T.x, z: T.z, y0: H(T.x, T.z) - 1.5, height: T.deck + 17, r: T.r, rTop: T.r * 0.8, roots: 4, crownY: T.deck + 14, crownR: 7.5, crownDensity: 0.8, seed: Math.floor(T.x * 7 + T.z * 3), name: T.name, buttress: 1.4 });
     ringDeck(ctx, T.x, T.z, T.deck, T.r - 0.2, DECK_R, { rot: (T.x * 0.37) % 1 });
   }
   torch(ctx, around(T1, 20, 3.8, T1.deck));
@@ -251,17 +251,19 @@ export function buildLevel({ visual = true } = {}) {
   collectible(ctx, 'idol', V(RUIN.x + 10.5, 5.0, RUIN.z + 1), 'Pillar Idol');
 
   // ================================================================== GAPS
-  gap(ctx, 'Falls Swing', 900, [[7, 9, -20], [20, 18, -8]], [[-20, 9, -18], [-10, 16, -8]]);
+  // Launch boxes are where you leave from (jump, vine release, rail exit).
+  gap(ctx, 'Falls Swing', 900, [[-10, 9, -19], [1, 23, -12]], [[-20, 8, -18], [-10, 20, -8]]);
   gap(ctx, 'Pool Plunge', 600, [[-14, 12, -24], [14, 30, -8]], [[-12, -6, -34], [10, 0, -14]], { land: 'water' });
-  gap(ctx, 'Ruin Swing', 600, [[-12, 5.5, 22], [-2, 10, 32]], [[0, 8, 19], [10, 13, 29]]);
-  gap(ctx, 'Canopy Express', 400, [[-6, 16, -3], [6, 22, 9]], [[9, 10, -19], [19, 15, -9]]);
-  gap(ctx, 'Shelf Hop', 500, [[10, 10, -19], [19, 18, -9]], [[27, 11, -16], [36, 18, 0]]);
-  gap(ctx, 'Fungus Ladder', 300, [[-6, 7.5, -3], [6, 9, 9]], [[-5, 16.5, -2], [5, 19, 8]]);
+  gap(ctx, 'Ruin Swing', 600, [[-5, 5, 21], [2, 15, 30]], [[0, 8, 19], [10, 13, 29]]);
+  gap(ctx, 'Kicker Swing', 700, [[0, 9.2, 5], [12, 16, 17]], [[-7, 7.5, -4], [7, 10, 10]]);
+  gap(ctx, 'Branch Hop', 400, [[-5, 7, 13], [1, 11, 18]], [[-1, 3, 9], [7, 14, 18]], { land: 'vine' });
 
   // ================================================================== DECOR
   decorate(ctx);
 
-  const spawn = { pos: around(HUB, 90, 4.4, HUB.deck + 0.05), yaw: 0 };
+  // Spawn on the ring deck facing the first fungus step up the trunk.
+  const sp = around(HUB, 118, 4.5, HUB.deck + 0.05), st = around(HUB, 200, 3.0, 0);
+  const spawn = { pos: sp, yaw: Math.atan2(st.x - sp.x, st.z - sp.z) };
   return { world, rails, vines, ctx, spawn };
 }
 
@@ -282,6 +284,8 @@ function decorate(ctx) {
     return Math.hypot(x - POOL.x, z - POOL.z) < POOL.r + 2;
   };
   const rimR = (a) => 37 + Math.sin(a * 3 + 0.7) * 1.2;
+  const _n = new THREE.Vector3();
+  const flat = (x, z, k = 0.78) => world.terrain.normalAt(x, z, _n).y > k;
 
   // Boulders along the cliff foot.
   for (let i = 0; i < 46; i++) {
@@ -308,6 +312,9 @@ function decorate(ctx) {
     if (waterHeight(x, z) > y - 0.2) continue;
     if (x > 8 && terrainTag(x, z) === 'mud') continue;
     const roll = R();
+    if (!flat(x, z, 0.7)) continue;
+    // Keep logs, stairs, mushrooms and posts clear.
+    if (world.query(x - 0.9, y - 0.5, z - 0.9, x + 0.9, y + 1.6, z + 0.9, []).some((c) => c.max.y - c.min.y < 50)) continue;
     if (roll < 0.42) addInst(ctx, 'fern', V(x, y - 0.05, z), R.range(0.9, 2.0), R() * 6.28, 0.4);
     else if (roll < 0.6) addInst(ctx, 'bush', V(x, y + 0.2, z), R.range(1.2, 2.6), R() * 6.28, 0.3);
     else if (roll < 0.9) addInst(ctx, 'grass', V(x, y - 0.05, z), R.range(0.6, 1.3), R() * 6.28, 0.2);
@@ -321,6 +328,18 @@ function decorate(ctx) {
     if (y < WORLD.waterLevel - 0.3) continue;
     addInst(ctx, 'grass', V(x, y - 0.05, z), R.range(1.0, 1.8), R() * 6.28, 0.2);
   }
+  // Rock outcrops embedded in the cliff faces, so the rim reads as layered rock.
+  for (let i = 0; i < 90; i++) {
+    const a = (i / 90) * Math.PI * 2 + R() * 0.05;
+    const d = R.range(38.5, 42.5);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d * 0.96;
+    if (Math.abs(x - FALLS.x) < 4 && z < 0) continue;
+    const top = terrainHeight(x * 1.06, z * 1.06);
+    const y = R.range(1, Math.max(2, top - 2));
+    if (y < terrainHeight(x, z) - 2.5) continue;
+    const s = R.range(2.2, 5.5);
+    boulder(ctx, x, y, z, s, { collide: false, sx: R.range(0.8, 1.6), sy: R.range(0.45, 0.9), sz: R.range(0.8, 1.4), rotY: R() * 6.28 });
+  }
   // Lianas draped down the cliff faces.
   for (let i = 0; i < 70; i++) {
     const a = R() * Math.PI * 2;
@@ -328,12 +347,13 @@ function decorate(ctx) {
     const x = Math.cos(a) * d, z = Math.sin(a) * d;
     if (Math.abs(x - FALLS.x) < 7 && z < 0) continue;
     const top = terrainHeight(x, z);
-    hangingVine(ctx, V(x * 0.985, top + 0.3, z * 0.985), R.range(6, 16), i + 300);
+    hangingVine(ctx, V(x * 0.985, top + 0.3, z * 0.985), R.range(6, 16), i + 300, false);
   }
   // Ferns on the rim plateau.
   for (let i = 0; i < 500; i++) {
     const a = R() * Math.PI * 2, d = R.range(42, 60);
     const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (!flat(x, z)) { R(); R(); R(); continue; }
     addInst(ctx, R() < 0.6 ? 'fern' : 'bush', V(x, terrainHeight(x, z) - 0.05, z), R.range(1.2, 2.6), R() * 6.28, 0.3);
   }
   // A few slim trees on the bowl floor and banks (climbable, out of the main lines).

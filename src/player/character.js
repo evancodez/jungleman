@@ -377,8 +377,11 @@ export class Character {
       const pts = [];
       for (let i = 0; i <= 8; i++) {
         const t = i / 8;
-        pts.push(new THREE.Vector2(Math.max(0.002, (r0 + (r1 - r0) * t) * Math.sin(Math.min(1, t * 6) * Math.PI / 2 + 0.2)), -t * len));
+        // Rounded top, tapering body, closed rounded tip.
+        const tip = t > 0.85 ? Math.sqrt(Math.max(0, 1 - ((t - 0.85) / 0.15) ** 2)) : 1;
+        pts.push(new THREE.Vector2(Math.max(0.001, (r0 + (r1 - r0) * t) * Math.sin(Math.min(1, t * 6) * Math.PI / 2 + 0.2) * tip), -t * len));
       }
+      pts[0].x = 0.001;
       const geo = new THREE.LatheGeometry(pts, 8);
       geo.scale(1, 1, 0.55);
       const c = new Float32Array(geo.attributes.position.count * 3).fill(0.85);
@@ -386,18 +389,22 @@ export class Character {
       return geo;
     };
     const locks = [
-      [-0.07, 0.08, -0.07, 0.3], [-0.035, 0.09, -0.095, 0.36], [0, 0.09, -0.1, 0.38], [0.035, 0.09, -0.095, 0.36], [0.07, 0.08, -0.07, 0.3],
-      [-0.085, 0.06, -0.03, 0.24], [0.085, 0.06, -0.03, 0.24],
+      [-0.05, 0.075, -0.075, 0.3], [-0.017, 0.08, -0.088, 0.34], [0.017, 0.08, -0.088, 0.34], [0.05, 0.075, -0.075, 0.3],
+      [-0.075, 0.07, -0.045, 0.24], [0.075, 0.07, -0.045, 0.24],
     ];
     for (const [x, y, z, len] of locks) {
       const a = new THREE.Group();
       a.position.set(x, y, z);
       head.add(a);
-      a.add(new THREE.Mesh(lock(0.03, 0.024, len * 0.52), this.hairMat));
+      const m1 = new THREE.Mesh(lock(0.042, 0.034, len * 0.52), this.hairMat);
+      m1.scale.set(1, 1, 0.7);
+      a.add(m1);
       const b = new THREE.Group();
       b.position.y = -len * 0.5;
       a.add(b);
-      b.add(new THREE.Mesh(lock(0.025, 0.006, len * 0.55), this.hairMat));
+      const m2 = new THREE.Mesh(lock(0.034, 0.014, len * 0.55), this.hairMat);
+      m2.scale.set(1, 1, 0.7);
+      b.add(m2);
       this.hair.push({ a, b, ax: 0.25, az: x * 2, bx: 0.1, vax: 0, vbx: 0, baseZ: x * 3.5, side: x });
     }
   }

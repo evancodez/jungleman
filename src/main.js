@@ -83,7 +83,7 @@ async function boot() {
     },
   };
 
-  setLoad(0.35, 'Carving the temple…');
+  setLoad(0.35, 'Growing the Elder Tree…');
   await nextFrame();
   game = new Game(canvas, hooks);
   window.__game = game;

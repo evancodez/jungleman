@@ -1,7 +1,19 @@
 // Traversal-line diagnostics for the Grotto: plays out the designed lines
 // with scripted input and prints what happened. Run: node tests/lines.diag.mjs
 import * as THREE from 'three';
-import { makeGame, run, camYawFor } from './helpers.js';
+import { makeGame as makeBase, run, camYawFor } from './helpers.js';
+import { ComboSystem } from '../src/game/tricks.js';
+
+// Games with a live combo system so gaps get detected.
+function makeGame() {
+  const g = makeBase();
+  const game = g.game;
+  Object.assign(game, { settings: { scoring: 'full' }, save: { gaps: [] }, writeSave: () => {}, level: g.level, player: g.player, time: 0 });
+  const combo = new ComboSystem(game);
+  game.events.on('*', () => { game.time = g.input.time; });
+  g.combo = combo;
+  return g;
+}
 import { HUB, T1, T2, T3, T4, T5 } from '../src/world/level.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -20,7 +32,7 @@ const trace = (g) => {
 function report(name, g, lines) {
   console.log(`\n=== ${name}`);
   for (const l of lines) console.log('  ' + l);
-  const names = g.log.filter((e) => e.name === 'trick' || e.name === 'gap').map((e) => e.data.name);
+  const names = g.log.filter((e) => e.name === 'trick' || e.name === 'gap').map((e) => (e.name === 'gap' ? 'GAP:' : '') + e.data.name);
   if (names.length) console.log('  tricks: ' + names.join(', '));
 }
 
@@ -209,4 +221,31 @@ import { MUDSLIDE } from '../src/world/terrain.js';
   g.input.moveY = 1;
   run(g, 3.5, { dir: [-0.2, 1], each: (c, t) => tr(c, t) });
   report('West Run', g, tr.out);
+}
+
+// 12. Spawn -> fungus steps -> crown deck.
+{
+  const g = makeGame();
+  run(g, 0.3);
+  const tr = trace(g);
+  const steps = g.game.world.colliders.filter((c) => c.tag === 'fungus').sort((a, b) => a.y1 - b.y1);
+  const targets = steps.map((c) => [c.x, c.y1, c.z]);
+  targets.push([HUB.x + 3.5, HUB.crown, HUB.z - 1]);
+  let k = 0, cool = 0;
+  g.input.moveY = 1;
+  run(g, 9, { camYawFn: (c) => {
+    const p = c.player.pos, t = targets[Math.min(k, targets.length - 1)];
+    return camYawFor([t[0] - p.x, t[2] - p.z]);
+  }, each: (c, t) => {
+    tr(c, t);
+    const p = c.player;
+    cool -= 1 / 60;
+    while (k < targets.length && p.state === 'ground' && p.pos.y > targets[k][1] - 0.3) k++;
+    const tg = targets[Math.min(k, targets.length - 1)];
+    const dh = Math.hypot(tg[0] - p.pos.x, tg[2] - p.pos.z);
+    c.input.moveY = dh < 0.6 ? 0.2 : 1;
+    if (p.state === 'ground' && cool <= 0 && dh < 3.2 && tg[1] > p.pos.y + 0.4) { c.input.tap('jump'); cool = 0.5; }
+  } });
+  report('Fungus steps', g, tr.out);
+  console.log('  reached', k, 'of', targets.length, 'final y', g.player.pos.y.toFixed(1));
 }

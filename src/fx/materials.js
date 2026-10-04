@@ -249,7 +249,7 @@ export function getMaterials() {
   const hanging = addWind(std({ map: T.vine.map, roughness: 0.85, color: 0x7d9d4a, side: THREE.DoubleSide }), { strength: 0.35 });
 
   const endGrain = std({ map: T.endGrain.map, normalMap: T.endGrain.normalMap, roughness: 0.9 });
-  const fungus = addMoss(std({ color: 0xd9b27a, roughness: 0.7, vertexColors: true, map: T.mud.map }), { amount: 0.4, lo: 0.7, hi: 1.1, key: 'fungus' });
+  const fungus = addMoss(std({ color: 0xe8b46e, roughness: 0.65, vertexColors: true }), { amount: 0.35, lo: 0.75, hi: 1.1, key: 'fungus' });
   const fungusUnder = std({ color: 0xeedcb8, roughness: 0.9, side: THREE.DoubleSide });
 
   const torchWood = std({ color: 0x4a3524, roughness: 0.9 });

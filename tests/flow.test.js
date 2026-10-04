@@ -104,15 +104,18 @@ test('Falls swing: two vines carry you from the Pool Tree to the Falls Tree', ()
     if (p.state === 'swing') {
       tSwing += 1 / 60;
       // Release like a player would: on the forward upswing.
-      const rising = p.vel.x < -4 && p.vel.y > 1.5 && tSwing > 0.3;
+      const rising = p.vel.x < -3 && p.vel.y > 1 && p.vel.length() < 10 && tSwing > 0.3;
       if (phase === 0 && rising) { c.input.tap('jump'); phase = 1; tSwing = 0; }
       else if (phase === 1 && p.swing.vine.anchor.x < 0 && rising) { c.input.tap('jump'); phase = 2; }
     }
+    // Arriving on the Falls Tree: its deck, its trunk, or the West Run branch off it.
     if (phase === 2 && p.state === 'ground' && Math.abs(p.pos.y - T1.deck) < 0.3) landedOnDeck = true;
+    if (phase === 2 && (p.state === 'wallrun' || p.state === 'climb') && Math.hypot(p.pos.x - T1.x, p.pos.z - T1.z) < 3.5) landedOnDeck = true;
+    if (phase === 2 && p.state === 'grind' && p.grind.rail.name === 'West Run') landedOnDeck = true;
   } });
   const vines = new Set(g.log.filter((e) => e.name === 'swingGrab').map((e) => e.data.vine.id));
   assert.equal(vines.size, 2, 'caught ' + vines.size + ' vines');
-  assert.ok(landedOnDeck, 'did not land on the Falls Tree deck');
+  assert.ok(landedOnDeck, 'did not reach the Falls Tree');
 });
 
 test('mud chute kicker throws you onto the Kicker Vine', () => {

@@ -117,7 +117,7 @@ export function crown(ctx, c, radius, seed = 0, density = 1) {
 }
 
 /** Decorative drooping liana (not grabbable). */
-export function hangingVine(ctx, top, len, seed = 0) {
+export function hangingVine(ctx, top, len, seed = 0, leaves = true) {
   if (!ctx.visual) return;
   const R = rng(seed + 5);
   const pts = [];
@@ -135,7 +135,7 @@ export function hangingVine(ctx, top, len, seed = 0) {
   g.setAttribute('sway', new THREE.BufferAttribute(sway, 1));
   ctx.decoVines.push(g);
   // leaves along
-  for (let i = 1; i < n; i += 1) {
+  for (let i = 1; i < n && leaves; i += 1) {
     if (R() < 0.6) addInst(ctx, 'leafSmall', pts[i], 0.9 + R() * 0.8, R() * 6.28, 1.2);
   }
 }

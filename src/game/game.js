@@ -36,7 +36,7 @@ export class Game {
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 1.05;
+    r.toneMappingExposure = 1.22;
     r.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer = r;
 
@@ -53,7 +53,7 @@ export class Game {
     scene.add(createBackdrop());
 
     // Lights.
-    const hemi = new THREE.HemisphereLight(0xcfe3ff, 0x4a5530, 1.15);
+    const hemi = new THREE.HemisphereLight(0xd6e8ff, 0x5a6338, 1.5);
     scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xfff0d8, 3.1);
     sun.castShadow = true;
@@ -175,7 +175,7 @@ export class Game {
       this.rig.update(dt, this.player, this.input);
     } else {
       this.vines.update(gdt, this.time, this.player.pos);
-      if (this.mode === 'title') this.rig.updateOrbit(dt, new THREE.Vector3(0, 6, 0));
+      if (this.mode === 'title') this.rig.updateOrbit(dt, new THREE.Vector3(0, 6, 0), 27, 11);
       if (this.mode === 'debug' && this.debugCam) {
         this.camera.position.copy(this.debugCam.pos);
         this.camera.lookAt(this.debugCam.look);

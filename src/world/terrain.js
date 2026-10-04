@@ -66,6 +66,12 @@ function baseHeight(x, z) {
   return h;
 }
 
+/** Irregular shoreline offset for the pool. */
+function poolWobble(x, z) {
+  const a = Math.atan2(z - POOL.z, x - POOL.x);
+  return Math.sin(a * 3 + 1.3) * 1.1 + Math.sin(a * 5 - 0.4) * 0.6 + noise2(x * 0.25, z * 0.25) * 0.8;
+}
+
 export function terrainHeight(x, z) {
   let h = baseHeight(x, z);
   // Mud chute: a smooth trough down the east bank.
@@ -81,7 +87,7 @@ export function terrainHeight(x, z) {
     h = hh;
   }
   // Waterfall pool.
-  const pd = Math.hypot(x - POOL.x, (z - POOL.z) * 0.92);
+  const pd = Math.hypot(x - POOL.x, (z - POOL.z) * 0.92) + poolWobble(x, z);
   if (pd < POOL.r + 4.5) {
     const t = smoothstep(POOL.r + 4.5, POOL.r - 2, pd);
     h = lerp(h, -3.2 + noise2(x * 0.3, z * 0.3) * 0.3, t);

@@ -15,7 +15,7 @@ export class Vine {
     this.seg = length / (this.n - 1);
     this.p = [];
     this.pp = [];
-    this.phase = opts.phase ?? Math.random() * 10;
+    this.phase = opts.phase ?? Math.abs(anchor.x * 1.7 + anchor.z * 2.3) % 10;
     this.name = opts.name || 'Vine';
     for (let i = 0; i < this.n; i++) {
       const v = new THREE.Vector3(anchor.x, anchor.y - i * this.seg, anchor.z);
