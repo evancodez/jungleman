@@ -1,0 +1,10 @@
+import * as THREE from 'three';
+import { makeGame, run } from './helpers.js';
+const g = makeGame();
+const W = g.game.world;
+const caps = W.colliders.filter(c=>c.bounce>0);
+for (const c of caps) console.log(c.type, c.x, c.z, c.r, c.y0, c.y1);
+const cap = caps[0];
+console.log('terrain at cap', W.terrain.heightAt(cap.x, cap.z));
+g.player.placeAt(new THREE.Vector3(cap.x-0.5, cap.y1+1.5, cap.z), -Math.PI/2);
+run(g, 0.6, {each:(c,t)=>{ if (Math.round(t*60)%5==0) console.log(t.toFixed(2), c.player.state, c.player.pos.toArray().map(v=>v.toFixed(2)).join(','), c.player.vel.y.toFixed(2), c.player.groundCol?.type, c.player.groundCol?.bounce); }});

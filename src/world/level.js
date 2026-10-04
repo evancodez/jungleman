@@ -258,7 +258,7 @@ export function buildLevel({ visual = true } = {}) {
   // ================================================================== COLLECTIBLES + GAPS
   collectible(ctx, 'letter', V(0.4, 21.2, -23.6), 'J');
   collectible(ctx, 'letter', V(TX, 18.6, TZ), 'U');
-  collectible(ctx, 'letter', V(-2.5, 1.6, -76.2), 'N');
+  collectible(ctx, 'letter', V(-1.5, 2.4, -74.3), 'N');
   collectible(ctx, 'letter', V(GT.x + 6.3, 31.4, GT.z), 'L');
   collectible(ctx, 'idol', V(7.2, 0.9, 46.2), 'Stepping Stone Idol');
   collectible(ctx, 'idol', V(59, 5.2, -21), 'Temple Idol');
@@ -342,12 +342,12 @@ function waterfallCave(ctx) {
   // A rock alcove behind the waterfall, entered from a ledge on the west.
   const zBack = -76.5;
   solid(ctx, { c: [0, 0.6, -71.5], size: [9, 1.2, 9], mat: 'rock', tag: 'rock', tile: 3 }); // floor
-  solid(ctx, { c: [-5.2, 4, -72], size: [1.6, 7, 9], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.3 }); // west wall (with entry gap below)
+  solid(ctx, { c: [-5.2, 4, -73.75], size: [1.6, 7, 5.5], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.3 }); // west wall (open at the front for the ledge path)
   solid(ctx, { c: [5.2, 4, -72], size: [1.6, 7, 9], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.3 }); // east wall
   solid(ctx, { c: [0, 7.8, -72.5], size: [12, 1.6, 9], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.3 }); // roof
   solid(ctx, { c: [0, 4, zBack], size: [10, 8, 1.5], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.3 });
   // Entry ledge path from the west bank of the pool.
-  solid(ctx, { c: [-8, 0.5, -69], size: [6, 1.0, 3], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.2 });
+  solid(ctx, { c: [-7.7, 0.5, -69], size: [6.6, 1.0, 3], mat: 'rock', tag: 'rock', tile: 3, rocky: 0.2 });
   boulder(ctx, -12.5, 0.2, -68, 1.6, { flatTop: true });
   torch(ctx, V(-3, 1.2, -74.5), { h: 1.2 });
   torch(ctx, V(3, 1.2, -74.5), { h: 1.2 });

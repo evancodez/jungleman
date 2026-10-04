@@ -1,0 +1,15 @@
+import * as THREE from 'three';
+import { makeGame, run } from './helpers.js';
+const g = makeGame();
+const W = g.game.world;
+const cap = W.colliders.find(c=>c.bounce>0 && Math.abs(c.x+18.6)<0.1);
+const trunk = W.colliders.find(c=>c.type==='cyl'&&c.climbable&&Math.abs(c.x+32)<0.1);
+g.player.placeAt(new THREE.Vector3(cap.x-0.5, cap.y1+1.5, cap.z), -Math.PI/2);
+g.player.vel.set(-5, 0, 0.8);
+const dir=[trunk.x-cap.x, trunk.z-cap.z];
+g.input.moveY = 1;
+let climbed=false;
+run(g, 3, { dir, each:(c)=>{ if(c.player.state==='climb'||c.player.state==='wallrun'){ climbed=true; } if (climbed && c.player.state==='climb') { c.input.moveY=-1; } } });
+const ev = g.log.filter(e=>['bounce','state','climb','wallrun','land'].includes(e.name)).map(e=>`${e.t.toFixed(2)} ${e.name} ${e.name==='state'?e.data.from+'->'+e.data.to:''}${e.name==='bounce'?' col.x='+e.data.col.x.toFixed(1)+' y='+e.data.pos.y.toFixed(2)+' groundY='+W.terrain.heightAt(e.data.pos.x,e.data.pos.z).toFixed(2):''}`);
+console.log(ev.join('\n'));
+console.log('final', g.player.state, g.player.pos.toArray().map(v=>v.toFixed(2)), 'dist from trunk axis', Math.hypot(g.player.pos.x-trunk.x, g.player.pos.z-trunk.z).toFixed(2));

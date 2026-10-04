@@ -186,3 +186,13 @@ test('climb leaps bound up the trunk faster than climbing', () => {
   assert.ok(g.log.some((e) => e.name === 'climbLeap'), 'no leap');
   assert.ok(gained > 2.0 * 3.4 * 1.15, 'gained only ' + gained.toFixed(1));
 });
+
+test('steps up a small ledge from a standstill (waterfall cave floor)', () => {
+  const g = makeGame();
+  // Wedge the player against the cave floor's west edge (0.2m higher), then push.
+  g.player.placeAt(V(-4.84, 1.0, -69), Math.PI / 2);
+  run(g, 0.2);
+  g.input.moveY = 1;
+  run(g, 0.5, { dir: [1, 0] });
+  assert.ok(g.player.pos.x > -3.5 && g.player.pos.y > 1.15, g.player.pos.toArray().join(','));
+});

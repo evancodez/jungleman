@@ -43,6 +43,7 @@ export class Animator {
   }
 
   update(dt, pl, time) {
+    this.dt = dt;
     const c = this.c;
     const P = blankPose();
     const st = pl.state;
@@ -158,11 +159,16 @@ export class Animator {
     // Idle -> run blend.
     const idle = 1 - clamp(a * 3, 0, 1);
     const breathe = Math.sin(time * 2.1);
+    this.idleT = idle > 0.9 ? (this.idleT || 0) + this.dt : 0;
     // Idle.
     P.hipY = -0.02 * idle;
     set(P, 'spine', 0.04 * idle);
     set(P, 'chest', (0.02 + breathe * 0.025) * idle);
-    set(P, 'neck', -0.04 * idle);
+    // After standing a while, glance around the jungle.
+    const look = smoothstep(2.5, 4, this.idleT) * idle;
+    const glance = Math.sin(time * 0.45) * 0.7 + Math.sin(time * 1.1) * 0.15;
+    set(P, 'neck', -0.04 * idle, glance * 0.5 * look, 0);
+    set(P, 'head', -0.05 * look + Math.sin(time * 0.3) * 0.05 * look, glance * 0.35 * look, 0);
     set(P, 'upperArmL', 0.06 * idle, 0, 0.17 * idle + 0.12 * (1 - idle));
     set(P, 'upperArmR', 0.06 * idle, 0, -0.17 * idle - 0.12 * (1 - idle));
     set(P, 'foreArmL', -0.25); set(P, 'foreArmR', -0.25);

@@ -416,7 +416,11 @@ export class Player {
         }
       } else {
         this.wallPush = 0;
-        if (into > 0.3 && hs > 0.5 && !this.tryStepUp(sx, sy, sz, vx0, vz0, dt)) {
+        // Step up whenever we're pushing into the obstacle (even from a standstill).
+        const pushing = into > 0.05 || inputInto > 0.3;
+        let stepVx = vx0, stepVz = vz0;
+        if (hs < 1 && inputInto > 0.3) { stepVx = this.inputDir.x * 2; stepVz = this.inputDir.z * 2; }
+        if (pushing && !this.tryStepUp(sx, sy, sz, stepVx, stepVz, dt)) {
           if (hs > 2.5 && inputInto > 0.35 && !(wn.col && wn.col.noMantle)) {
             const ledge = this.findLedge(wn.nx, wn.nz, 0.45, 1.6);
             if (ledge) { this.startMantle(ledge, true, Math.max(hs, 5)); return; }
