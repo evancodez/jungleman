@@ -435,7 +435,7 @@ function decorate(ctx) {
     if (spots.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 9)) continue;
     spots.push([x, z]);
     const h = R.range(14, 26);
-    tree(ctx, { x, z, y0: y - 1, height: h, r: R.range(0.7, 1.3), roots: 0, crownY: y + h - 2, crownR: R.range(4, 7), climbable: true, buttress: 0.5, seed: i * 7 + 3, crownDensity: 0.7 });
+    tree(ctx, { x, z, y0: y - 1, height: h, r: R.range(0.7, 1.3), roots: 0, crownY: y + h - 2, crownR: R.range(4, 7), climbable: true, buttress: 0.5, seed: i * 7 + 3, crownDensity: 0.7, limbs: 3 });
   }
   // Background ring of giant trees beyond the boundary.
   for (let i = 0; i < 70; i++) {

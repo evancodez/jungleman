@@ -78,6 +78,20 @@ export function tree(ctx, o) {
   // Crown.
   const crownY = o.crownY ?? y1 - 2;
   const crownR = o.crownR ?? r * 3;
+  // A few visual limbs reaching into the crown so trees don't read as bare poles.
+  if (o.limbs && ctx.visual) {
+    const nl = o.limbs;
+    for (let i = 0; i < nl; i++) {
+      const a = R() * Math.PI * 2;
+      const y = crownY - 2 - R() * Math.min(6, o.height * 0.25);
+      const len = crownR * (0.55 + R() * 0.35);
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const p0 = V(o.x + ca * rTop * 0.6, y, o.z + sa * rTop * 0.6);
+      const p1 = V(o.x + ca * len * 0.5, y + len * 0.35, o.z + sa * len * 0.5);
+      const p2 = V(o.x + ca * len, y + len * 0.45 + R(), o.z + sa * len);
+      branch(ctx, [p0, p1, p2], { r0: rTop * 0.55, r1: rTop * 0.18, walk: false, grind: false, leaves: true, hangers: false, leafRange: [0.5, 1] });
+    }
+  }
   if (o.leaves !== false) crown(ctx, V(o.x, crownY, o.z), crownR, seed, o.crownDensity ?? 1);
   return col;
 }
