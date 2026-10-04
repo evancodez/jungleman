@@ -191,7 +191,15 @@ async function boot() {
   audioHint.textContent = 'Click or press any key to enable sound';
   audioHint.style.display = 'none';
   uiRoot.appendChild(audioHint);
+  const lockHint = document.createElement('div');
+  lockHint.className = 'lockhint';
+  lockHint.style.bottom = '54px';
+  lockHint.textContent = 'Click the game to capture the mouse for camera control';
+  lockHint.style.display = 'none';
+  uiRoot.appendChild(lockHint);
   setInterval(() => {
+    const i = game.input;
+    lockHint.style.display = game.mode === 'playing' && i.lastDevice === 'kbm' && !i.pointerLocked && !i.noLock ? '' : 'none';
     const blocked = !audio.ctx || audio.ctx.state !== 'running';
     audioHint.style.display = blocked && game.mode !== 'title' && game.input.lastDevice === 'gamepad' ? '' : 'none';
     if (audio.ctx && audio.ctx.state === 'suspended' && game.input.lastDevice === 'gamepad') audio.ctx.resume().catch(() => {});
