@@ -23,6 +23,7 @@ export class FakeInput {
 let LEVEL = null;
 export function makeGame() {
   if (!LEVEL) LEVEL = buildLevel({ visual: false });
+  for (const v of LEVEL.vines.vines) v.reset();
   const events = new Events();
   const input = new FakeInput();
   const log = [];

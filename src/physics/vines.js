@@ -30,6 +30,16 @@ export class Vine {
     this.pushImpulse = new THREE.Vector3();
   }
 
+  /** Hang straight down again (used when a scene is reused). */
+  reset() {
+    this.held = false;
+    this.pushImpulse.set(0, 0, 0);
+    for (let i = 0; i < this.n; i++) {
+      this.p[i].set(this.anchor.x, this.anchor.y - i * this.seg, this.anchor.z);
+      this.pp[i].copy(this.p[i]);
+    }
+  }
+
   update(dt, time) {
     const g = 14;
     const damping = 0.985;

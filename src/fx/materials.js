@@ -248,10 +248,14 @@ export function getMaterials() {
   }), { strength: 0.12 })), 0.5, 1.6);
   const hanging = addWind(std({ map: T.vine.map, roughness: 0.85, color: 0x7d9d4a, side: THREE.DoubleSide }), { strength: 0.35 });
 
+  const endGrain = std({ map: T.endGrain.map, normalMap: T.endGrain.normalMap, roughness: 0.9 });
+  const fungus = addMoss(std({ color: 0xd9b27a, roughness: 0.7, vertexColors: true, map: T.mud.map }), { amount: 0.4, lo: 0.7, hi: 1.1, key: 'fungus' });
+  const fungusUnder = std({ color: 0xeedcb8, roughness: 0.9, side: THREE.DoubleSide });
+
   const torchWood = std({ color: 0x4a3524, roughness: 0.9 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xffc845, metalness: 1, roughness: 0.28, emissive: 0x6a4400, emissiveIntensity: 0.6 });
   const letter = new THREE.MeshStandardMaterial({ color: 0xfff1c0, metalness: 0.2, roughness: 0.4, emissive: 0xffaa22, emissiveIntensity: 1.2 });
 
-  LIB = { bark, branch, stone, face, rock, planks, wood, thatch, rope, vine, mushroomCap, mushroomCapSolid, mushroomStem, mud, leaves, fern, hanging, torchWood, gold, letter, terrain: terrainMaterial() };
+  LIB = { bark, branch, stone, face, rock, planks, wood, thatch, rope, vine, mushroomCap, mushroomCapSolid, mushroomStem, mud, leaves, fern, hanging, torchWood, gold, letter, endGrain, fungus, fungusUnder, terrain: terrainMaterial() };
   return LIB;
 }

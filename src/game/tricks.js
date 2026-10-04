@@ -5,7 +5,7 @@ import { clamp } from '../core/math.js';
 
 const FLOW_WINDOW = 1.25;
 const SMALL = {
-  'Long Jump': 100, 'Skid Flip': 0, 'Rail Hop': 0, 'Water Hop': 0, 'Zip Drop': 0,
+  'Long Jump': 100, 'Skid Flip': 0, 'Rail Hop': 0, 'Branch Hop': 0, 'Water Hop': 0, 'Zip Drop': 0,
 };
 const PRAISE = [[50000, 'JUNGLE KING!'], [25000, 'UNTAMED!'], [12000, 'WILD!'], [6000, 'SAVAGE!'], [2500, 'SWEET!'], [900, 'NICE!']];
 
@@ -25,6 +25,7 @@ export class ComboSystem {
     ev.on('railTransfer', () => this.add('Transfer', 150, {}));
     ev.on('land', (e) => { if (e.rolled) this.add('Roll', 100, e); this.checkGap(e.pos, 'any'); });
     ev.on('grindStart', (e) => { this.keepAlive(); this.checkGap(e.pos, 'grind'); });
+    ev.on('perch', (e) => { if (e.fromAir) this.add('Branch Landing', 60, e); this.checkGap(e.pos, 'any'); });
     ev.on('swingGrab', (e) => { this.keepAlive(); this.checkGap(e.pos, 'vine'); });
     ev.on('wallrun', (e) => { this.keepAlive(); this.checkGap(e.pos, 'any'); });
     ev.on('climb', () => this.keepAlive());
@@ -122,6 +123,9 @@ export class ComboSystem {
     } else if (st === 'climb') {
       this.climbT += dt;
       if (this.climbT > 3.5) { this.flow -= dt; if (this.flow <= 0) this.bank(); }
+    } else if (st === 'grind' && pl.grind.mode === 'run' && pl.grind.speed < 2) {
+      this.flow -= dt; // standing still on a branch lets the combo run out
+      if (this.flow <= 0) this.bank();
     } else if (st === 'swim') {
       this.bank();
     } else {

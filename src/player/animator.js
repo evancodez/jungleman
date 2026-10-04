@@ -309,6 +309,16 @@ export class Animator {
       this.hangPose(P, pl, time, 0);
       return;
     }
+    if (g.mode === 'run') {
+      // Running along a branch: normal stride with arms out for balance.
+      this.groundPose(P, pl, time, g.speed);
+      const bal = 1 - clamp(g.speed / 9, 0, 0.7);
+      const wob = Math.sin(time * 3.1) * 0.12 * bal;
+      add(P, 'upperArmL', 0, 0, 0.55 * bal + wob);
+      add(P, 'upperArmR', 0, 0, -0.55 * bal + wob);
+      P.pivotZ += g.lean * -0.12 + wob * 0.3;
+      return;
+    }
     const side = g.switch ? -1 : 1;
     const crouch = pl.input.held('slide') ? 1 : 0;
     const wob = Math.sin(time * 2.7) * 0.08 + Math.sin(time * 5.3) * 0.04;

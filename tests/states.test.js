@@ -8,26 +8,9 @@ const ground = (g, x, z) => g.game.world.terrain.heightAt(x, z);
 const states = (g) => new Set(g.log.filter((e) => e.name === 'state').map((e) => e.data.to));
 const events = (g) => new Set(g.log.map((e) => e.name));
 
-test('wall run along the broken temple wall and kick off', () => {
-  const g = makeGame();
-  // Wall segment x 20..31 at z=20 (thickness 1.4). Approach diagonally from the south side.
-  g.player.placeAt(V(21, ground(g, 21, 22.4) + 1.0, 22.4), Math.PI / 2);
-  run(g, 0.05);
-  g.player.setState('air');
-  g.player.vel.set(11, 6, -4.5);
-  g.player.setState('air');
-  g.input.moveY = 1;
-  let ran = false;
-  run(g, 0.6, { dir: [1, -0.3], each: (c) => { if (c.player.state === 'wallrun') ran = true; } });
-  assert.ok(ran, 'did not wall run; state=' + g.player.state);
-  g.input.tap('jump');
-  run(g, 0.3, { dir: [1, -0.3] });
-  assert.ok(events(g).has('wallKick'));
-});
-
 test('landing mid-flip bails, then recovers', () => {
   const g = makeGame();
-  g.player.placeAt(V(-10, ground(g, -10, 20) + 1.2, 20), 0);
+  g.player.placeAt(V(-20, ground(g, -20, -4) + 1.2, -4), 0);
   g.player.setState('air');
   g.player.vel.set(0, 1, 0);
   g.player.startFlip('back');
@@ -38,9 +21,9 @@ test('landing mid-flip bails, then recovers', () => {
   assert.equal(g.player.state, 'ground');
 });
 
-test('falling into the river swims, then hops out at the bank', () => {
+test('falling into the pool swims, then hops out at the bank', () => {
   const g = makeGame();
-  g.player.placeAt(V(-3, 4, 0), 0);
+  g.player.placeAt(V(-1, 4, -24), 0);
   run(g, 1.5);
   assert.equal(g.player.state, 'swim');
   g.input.moveX = -1; // swim west to the bank
@@ -62,23 +45,23 @@ test('mushroom bounces and super-bounces', () => {
   assert.ok(g.log.some((e) => e.name === 'bounce' && e.data.super), 'no super bounce');
 });
 
-test('jumping at the temple base mantles onto tier 1', () => {
+test('jumping at the ruin base mantles onto it', () => {
   const g = makeGame();
-  // Tier 1 spans x 31..61, top y=4. Approach its west face from x=27 at z=-20.
-  g.player.placeAt(V(28.5, ground(g, 28.5, -20) + 0.1, -20), Math.PI / 2);
+  // Ruin base spans x -13..-1, top y=2. Approach its west face from x=-16.5.
+  g.player.placeAt(V(-16.5, ground(g, -16.5, 30) + 0.1, 30), Math.PI / 2);
   run(g, 0.3);
   g.input.moveY = 1;
   run(g, 0.25, { dir: [1, 0] });
   g.input.press('jump');
   run(g, 1.2, { dir: [1, 0] });
   assert.ok(events(g).has('mantle'), 'no mantle');
-  assert.ok(g.player.pos.y > 3.5, 'y=' + g.player.pos.y);
+  assert.ok(g.player.pos.y > 1.8, 'y=' + g.player.pos.y);
 });
 
 test('slide into a long jump, spin and pose register as tricks', () => {
   const g = makeGame();
-  // Flat open ground near the village.
-  g.player.placeAt(V(40, ground(g, 40, 34) + 0.1, 34), 0);
+  // Open floor west of the Elder Tree.
+  g.player.placeAt(V(-28, ground(g, -28, -4) + 0.1, -4), Math.PI / 2);
   run(g, 0.3);
   g.input.moveY = 1;
   run(g, 1.0, { dir: [1, 0] });
@@ -132,29 +115,29 @@ test('no NaNs over a long random input session', () => {
   console.log('random session states:', [...states(g)].join(','));
 });
 
-test('running up the temple stairs stays grounded and reaches the top tier', () => {
+test('running up the ruin stairs stays grounded and reaches the top', () => {
   const g = makeGame();
-  g.player.placeAt(V(22, ground(g, 22, -8) + 0.1, -8), Math.PI / 2);
+  g.player.placeAt(V(-7, ground(g, -7, 13.5) + 0.1, 13.5), 0);
   run(g, 0.3);
   g.input.moveY = 1;
   let airFrames = 0, frames = 0;
-  run(g, 3.0, { dir: [1, 0], each: (c) => { frames++; if (c.player.state === 'air' && c.player.pos.x > 27 && c.player.pos.x < 38) airFrames++; } });
-  assert.ok(g.player.pos.y > 11.5, 'y=' + g.player.pos.y.toFixed(2) + ' x=' + g.player.pos.x.toFixed(1));
+  run(g, 1.6, { dir: [0, 1], each: (c) => { frames++; if (c.player.state === 'air' && c.player.pos.z > 17 && c.player.pos.z < 24) airFrames++; } });
+  assert.ok(g.player.pos.y > 3.0, 'y=' + g.player.pos.y.toFixed(2) + ' z=' + g.player.pos.z.toFixed(1));
   assert.ok(airFrames < 6, 'bounced into the air ' + airFrames + ' frames on the stairs');
 });
 
 test('jumping at a big trunk at an angle spirals around it', () => {
   const g = makeGame();
-  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
-  // Start south of the trunk, offset east, running west (tangent), steering slightly toward it.
-  const start = V(col.x + 8, 0, col.z + col.r + 1.2);
-  start.y = ground(g, start.x, start.z) + 4.5;
+  const col = g.game.world.colliders.find((c) => c.name === 'Elder Tree');
+  // Start north of the trunk, offset east, running west (tangent), steering slightly toward it.
+  const start = V(col.x + 8, 0, col.z - col.r - 1.2);
+  start.y = ground(g, start.x, start.z) + 3.5;
   g.player.placeAt(start, -Math.PI / 2);
   g.player.setState('air');
-  g.player.vel.set(-12, 3, -1.5);
+  g.player.vel.set(-12, 3, 1.5);
   g.input.moveY = 1;
   let spiral = false;
-  run(g, 1.0, { dir: [-1, -0.35], each: (c) => { if (c.player.state === 'wallrun' && c.player.wall.type === 'spiral') spiral = true; } });
+  run(g, 1.0, { dir: [-1, 0.35], each: (c) => { if (c.player.state === 'wallrun' && c.player.wall.type === 'spiral') spiral = true; } });
   assert.ok(spiral, 'no spiral; state=' + g.player.state);
 });
 
@@ -176,25 +159,27 @@ test('brushing past a thin tree does not grab it', () => {
 
 test('climb leaps bound up the trunk faster than climbing', () => {
   const g = makeGame();
-  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
-  g.player.placeAt(V(col.x + 1, 3, col.z + col.r + 0.4), Math.PI, false);
+  const col = g.game.world.colliders.find((c) => c.type === 'cyl' && c.climbable && Math.abs(c.x + 33) < 0.5 && Math.abs(c.z - 2) < 0.5);
+  g.player.placeAt(V(col.x + col.r + 0.4, ground(g, col.x + col.r + 1, col.z) + 1.5, col.z), -Math.PI / 2, false);
   g.player.startClimb(col);
   g.input.moveY = 1;
   const y0 = g.player.pos.y;
   run(g, 2.0, { each: (c, t) => { if (c.player.state === 'climb' && Math.floor(t * 10) % 3 === 0) c.input.tap('jump'); } });
   const gained = g.player.pos.y - y0;
   assert.ok(g.log.some((e) => e.name === 'climbLeap'), 'no leap');
-  assert.ok(gained > 2.0 * 3.4 * 1.15, 'gained only ' + gained.toFixed(1));
+  assert.ok(gained > 2.0 * 5.2 * 1.1, 'gained only ' + gained.toFixed(1));
 });
 
-test('steps up a small ledge from a standstill (waterfall cave floor)', () => {
+test('steps up a small ledge from a standstill (chute-top deck)', () => {
   const g = makeGame();
-  // Wedge the player against the cave floor's west edge (0.2m higher), then push.
-  g.player.placeAt(V(-4.84, 1.0, -69), Math.PI / 2);
+  // The plank deck at the top of the mud chute sits ~0.4m above the shelf.
+  const deck = g.game.world.colliders.find((c) => c.type === 'box' && c.tag === 'wood' && c.min.x > 29 && c.min.x < 31 && c.max.y > 12);
+  const x0 = deck.min.x - 0.42, z0 = (deck.min.z + deck.max.z) / 2;
+  g.player.placeAt(V(x0, ground(g, x0, z0) + 0.05, z0), Math.PI / 2);
   run(g, 0.2);
   g.input.moveY = 1;
   run(g, 0.5, { dir: [1, 0] });
-  assert.ok(g.player.pos.x > -3.5 && g.player.pos.y > 1.15, g.player.pos.toArray().join(','));
+  assert.ok(g.player.pos.x > deck.min.x + 0.3 && g.player.pos.y > deck.max.y - 0.05, g.player.pos.toArray().join(','));
 });
 
 test('climbing down after a mushroom bounce does not bounce off the dirt', () => {
@@ -204,8 +189,8 @@ test('climbing down after a mushroom bounce does not bounce off the dirt', () =>
   run(g, 0.4);
   assert.ok(g.log.some((e) => e.name === 'bounce'));
   // Teleport onto a trunk and climb down to the ground.
-  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
-  g.player.placeAt(V(col.x + 1, ground(g, col.x + 1, col.z + col.r + 3) + 2.5, col.z + col.r + 0.4), Math.PI, false);
+  const col = g.game.world.colliders.find((c) => c.type === 'cyl' && c.climbable && Math.abs(c.x + 33) < 0.5 && Math.abs(c.z - 2) < 0.5);
+  g.player.placeAt(V(col.x + col.r + 0.4, ground(g, col.x + col.r + 1, col.z) + 2.5, col.z), -Math.PI / 2, false);
   g.player.startClimb(col);
   const before = g.log.filter((e) => e.name === 'bounce').length;
   g.input.moveY = -1;
@@ -236,7 +221,7 @@ test('releasing a slide on a steep slope stands back up', () => {
 
 test('a skid does not survive a jump into the next landing', () => {
   const g = makeGame();
-  g.player.placeAt(V(40, ground(g, 40, 34) + 0.1, 34), 0);
+  g.player.placeAt(V(-20, ground(g, -20, -4) + 0.1, -4), 0);
   run(g, 0.3);
   g.player.skidding = true;
   g.player.setState('air');

@@ -55,7 +55,7 @@ export class Player {
     this.flip = { active: false, axis: 'x', dir: 1, angle: 0, target: 0, count: 0, kind: '' };
     this.spin = { active: false, dir: 1, angle: 0, target: 0, total: 0 };
     this.pose = { active: false, type: '', time: 0 };
-    this.grind = { rail: null, s: 0, dir: 1, speed: 0, dist: 0, trickT: -1, trickKind: '', switch: false, lastRail: null, lastTime: -10, lean: 0 };
+    this.grind = { rail: null, s: 0, dir: 1, speed: 0, dist: 0, runDist: 0, mode: 'grind', entryTime: -10, trickT: -1, trickKind: '', switch: false, lastRail: null, lastTime: -10, lean: 0 };
     this.swing = { vine: null, d: 0, hand: new THREE.Vector3(), lastVine: null, lastTime: -10, flipT: -1, angle: 0 };
     this.wall = { type: '', col: null, theta: 0, sign: 1, speed: 0, vy: 0, normal: new THREE.Vector3(), tangent: new THREE.Vector3(), dist: 0, R: 0 };
     this.climb = { col: null, theta: 0, phase: 0, R: 0, moving: 0 };
@@ -140,6 +140,23 @@ export class Player {
 
   wantsGrab() {
     return this.input.pressed('grab', 0.2) || this.input.held('grab');
+  }
+
+  /** Landing mode for rails: run along them, or grind if asked to. */
+  perchMode() {
+    return this.input.held('grab') || this.input.held('slide') || this.autoGrind ? 'grind' : 'run';
+  }
+
+  tryPerchOnGroundRail() {
+    const col = this.groundCol;
+    const rail = col && col.data && col.data.rail;
+    if (!rail || rail.hang) return false;
+    if (rail === this.grind.lastRail && this.time - this.grind.lastTime < 0.5) return false;
+    const tmp = rail.closest(_v.set(this.pos.x, this.pos.y - rail.r0, this.pos.z), { s: 0, dist: 0 });
+    if (tmp.dist > 1.3) return false;
+    const slope = Math.abs(rail.tangentAt(tmp.s, _t).y);
+    this.startGrind(rail, tmp.s, slope > P.runMaxSlope ? 'grind' : this.perchMode());
+    return true;
   }
 
   computeInput() {
@@ -269,6 +286,8 @@ export class Player {
 
     // Mushrooms and other trampolines never let you stand still.
     if (this.groundCol && this.groundCol.bounce) { this.doBounce(Math.max(4, -v.y), this.groundCol); return; }
+    // Standing on a branch or log means running along it.
+    if (this.tryPerchOnGroundRail()) return;
 
     let hx = v.x, hz = v.z;
     let hs = Math.hypot(hx, hz);
@@ -416,6 +435,12 @@ export class Player {
       const hs = Math.hypot(vx0, vz0);
       const into = -(vx0 * wn.nx + vz0 * wn.nz);
       const inputInto = -(this.inputDir.x * wn.nx + this.inputDir.z * wn.nz) * this.inputMag;
+      if (wn.col && wn.col.climbable && wn.col.type === 'cyl' && inputInto > 0.3 && into > 5) {
+        // Hit a trunk at speed: run straight up it.
+        this.wallPush = 0;
+        this.startTrunkRun(wn.col, hs);
+        return;
+      }
       if (wn.col && wn.col.climbable && wn.col.type === 'cyl' && inputInto > 0.6) {
         // Pushing the stick into a trunk: start running up / climbing it.
         this.wallPush += dt;
@@ -561,14 +586,16 @@ export class Player {
 
     this.updateAirTricks(dt);
 
-    // Grab vines / rails.
+    // Grab vines / rails. Holding grab catches from further away (and grinds);
+    // otherwise touching a vine catches it and landing on a branch perches you.
     if (this.airTime > 0.06 || this.prevState !== 'ground') {
       if (this.wantsGrab()) {
         if (this.tryGrabVine(1.55)) { inp.consume('grab'); return; }
         if (this.tryGrabRail({})) { inp.consume('grab'); return; }
-      } else if (this.autoGrind && v.y < 0) {
-        if (this.tryGrabRail({ auto: true })) return;
       }
+      if (this.tryGrabVine(P.vineCatch, true)) return;
+      if (v.y < 1.5 && this.tryGrabRail({ auto: true, mode: this.perchMode() })) return;
+      if (v.y < 2.5 && this.airTime > 0.12) this.airAssist(dt);
     }
 
     const vyBefore = v.y;
@@ -583,10 +610,41 @@ export class Player {
       return;
     }
     if (this.wallHit && this.wallHit.col) {
+      // Clipping the rim of a mushroom cap still bounces you (generous).
+      const wc = this.wallHit.col;
+      if (wc.bounce && this.pos.y > wc.max.y - 1.1) { this.pos.y = Math.max(this.pos.y, wc.max.y); this.doBounce(Math.max(4, -vyBefore), wc); return; }
       if (this.tryWallAction(this.wallHit, vyBefore)) return;
     }
     if (this.hitCeil && v.y > 0) v.y = 0;
     this.checkWater();
+  }
+
+  /**
+   * Gentle magnetism toward a branch or vine you're already flying at, so
+   * hops connect without the game steering for you.
+   */
+  airAssist(dt) {
+    const v = this.vel;
+    const hs = Math.hypot(v.x, v.z);
+    let tx = 0, tz = 0, best = Infinity;
+    const g = this.grind;
+    const snap = this.rails.findSnap(this.pos, v, { reachH: 2.4, upReach: 0.5, downReach: 3.2, exclude: (r) => r.hang || (r === g.lastRail && this.time - g.lastTime < 0.4) });
+    if (snap && snap.dist > 0.25) {
+      snap.rail.pointAt(snap.s, _v3);
+      tx = _v3.x - this.pos.x; tz = _v3.z - this.pos.z; best = snap.dist;
+    }
+    const hand = _v2.set(this.pos.x, this.pos.y + P.handHeight - 0.2, this.pos.z);
+    const sw = this.swing;
+    const vg = this.vines.findGrab(hand, 2.6, (vn) => vn === sw.lastVine && this.time - sw.lastTime < 0.6);
+    if (vg && vg.dist < best + 0.5) { tx = vg.point.x - hand.x; tz = vg.point.z - hand.z; best = Math.hypot(tx, tz); }
+    if (best === Infinity || best < 0.2) return;
+    const dx = tx / best, dz = tz / best;
+    // Only when already heading that way (by momentum or stick).
+    const heading = hs > 1 ? (v.x * dx + v.z * dz) / hs : 0;
+    const stick = (this.inputDir.x * dx + this.inputDir.z * dz) * this.inputMag;
+    if (heading < 0.35 && stick < 0.5) return;
+    const k = P.airAssist * (1 - best / 2.8) * dt;
+    v.x += dx * k; v.z += dz * k;
   }
 
   land(vyBefore, hsBefore) {
@@ -806,8 +864,9 @@ export class Player {
     return null;
   }
 
-  startMantle(target, vault, hs) {
+  startMantle(target, vault, hs, perch = null) {
     const mt = this.mantle;
+    mt.perch = perch;
     mt.from.copy(this.pos);
     mt.to.copy(target);
     const h = target.y - this.pos.y;
@@ -815,9 +874,10 @@ export class Player {
     mt.t = 0;
     mt.vault = vault;
     mt.dir.set(target.x - this.pos.x, 0, target.z - this.pos.z);
-    if (mt.dir.lengthSq() < 1e-6) mt.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    if (mt.dir.lengthSq() < 1e-6 || perch) mt.dir.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     mt.dir.normalize();
     mt.exitSpeed = vault ? Math.max(hs * 0.9, 5) : Math.max(hs * 0.55, 3.5);
+    if (perch) mt.dur = 0.22 + 0.06 * h;
     this.yaw = Math.atan2(mt.dir.x, mt.dir.z);
     this.cancelTricks();
     this.vel.set(0, 0, 0);
@@ -831,11 +891,28 @@ export class Player {
     mt.t = Math.min(1, mt.t + dt / mt.dur);
     const ty = easeOut(Math.min(1, mt.t / 0.7));
     const tx = smoothstep(0.25, 1, mt.t);
+    const tr = mt.perch && mt.perch.trunk;
+    if (tr && mt.t < 1) {
+      // Swing around the trunk instead of cutting through it.
+      const a0 = Math.atan2(mt.from.z - tr.z, mt.from.x - tr.x), a1 = Math.atan2(mt.to.z - tr.z, mt.to.x - tr.x);
+      const r0 = Math.hypot(mt.from.x - tr.x, mt.from.z - tr.z), r1 = Math.hypot(mt.to.x - tr.x, mt.to.z - tr.z);
+      const ta = smoothstep(0, 0.8, mt.t);
+      const a = a0 + wrapAngle(a1 - a0) * ta;
+      const rr = Math.max(tr.r + P.radius, lerp(r0, r1, tx));
+      this.pos.set(tr.x + Math.cos(a) * rr, lerp(mt.from.y, mt.to.y, ty), tr.z + Math.sin(a) * rr);
+      return;
+    }
     this.pos.set(
       lerp(mt.from.x, mt.to.x, tx),
       lerp(mt.from.y, mt.to.y, ty) + (mt.vault ? Math.sin(mt.t * Math.PI) * 0.25 : 0),
       lerp(mt.from.z, mt.to.z, tx)
     );
+    if (mt.t >= 1 && mt.perch) {
+      this.pos.copy(mt.to);
+      this.vel.set(0, 0, 0);
+      this.startGrind(mt.perch.rail, mt.perch.s, 'run');
+      return;
+    }
     if (mt.t >= 1) {
       this.pos.copy(mt.to);
       this.vel.set(mt.dir.x * mt.exitSpeed, 0, mt.dir.z * mt.exitSpeed);
@@ -909,6 +986,7 @@ export class Player {
       w.dist += Math.abs(w.vy) * dt;
       this.yaw = Math.atan2(-Math.cos(w.theta), -Math.sin(w.theta));
       if (inp.pressed('jump', 0.12)) { this.wallKick(); return; }
+      if (this.tryPerchAbove()) return;
       // Blocked above or reached the top?
       if (this.headBlocked() || p.y + P.height > col.y1 - 0.1) {
         if (this.tryMantleAbove()) return;
@@ -970,6 +1048,46 @@ export class Player {
     const cs = this.world.capsuleContacts(_v.copy(this.pos).add(_v2.set(0, 0.15, 0)), P.radius * 0.8, P.height, this.contacts);
     for (const c of cs) if (c.ny < -0.3 && c.col !== this.wall.col && c.col !== this.climb.col) return true;
     return false;
+  }
+
+  /** Pull up onto a branch just above the hands (from a climb or trunk run). */
+  tryPerchAbove() {
+    const p = this.pos;
+    const trunk = this.state === 'climb' ? this.climb.col : this.state === 'wallrun' ? this.wall.col : null;
+    const hand = _v.set(p.x, p.y + P.handHeight, p.z);
+    const tmp = { s: 0, dist: 0 };
+    let best = null;
+    for (const r of this.rails.rails) {
+      if (r.hang || r.kind === 'rope') continue;
+      const m = trunk ? 2.5 + trunk.r * 2 : 1.5;
+      if (hand.x < r.min.x - m || hand.x > r.max.x + m || hand.z < r.min.z - m || hand.z > r.max.z + m || hand.y < r.min.y - 1.5 || hand.y > r.max.y + 1.5) continue;
+      r.closest(hand, tmp);
+      if (tmp.dist > 1.25) {
+        // On a trunk, branches growing out of it on any side are in reach.
+        if (!trunk) continue;
+        r.closest(_v3.set(trunk.x, hand.y, trunk.z), tmp);
+        if (tmp.dist > trunk.r + 1.0) continue;
+      }
+      const top = this.railPos(r, tmp.s, _v2);
+      if (top.y < p.y + 0.9 || top.y > p.y + 2.6) continue;
+      if (Math.abs(r.tangentAt(tmp.s, _t).y) > P.runMaxSlope) continue;
+      if (!best || tmp.dist < best.dist) best = { rail: r, s: tmp.s, dist: tmp.dist, top: top.clone() };
+    }
+    if (!best) return false;
+    // Face away from the trunk we were on, and step out clear of it.
+    const col = trunk;
+    if (col && col.type === 'cyl') {
+      this.yaw = Math.atan2(p.x - col.x, p.z - col.z);
+      const r = best.rail, clear = col.r + P.radius + 0.15;
+      const away = (ss) => { r.pointAt(clamp(ss, 0, r.length), _v3); return Math.hypot(_v3.x - col.x, _v3.z - col.z); };
+      const step = away(best.s + 0.3) >= away(best.s - 0.3) ? 0.15 : -0.15;
+      for (let i = 0; i < 40 && away(best.s) < clear; i++) best.s = clamp(best.s + step, 0, r.length);
+      if (away(best.s) < clear - 0.2) return false;
+      this.railPos(r, best.s, best.top);
+    }
+    this.startMantle(best.top, false, 3, { rail: best.rail, s: best.s, trunk: col && col.type === 'cyl' ? col : null });
+    if (col && col.type === 'cyl') this.yaw = Math.atan2(best.top.x - col.x, best.top.z - col.z);
+    return true;
   }
 
   tryMantleAbove() {
@@ -1129,6 +1247,7 @@ export class Player {
       this.grounded = true;
       return;
     }
+    if (vy >= 0 && this.stateTime > 0.15 && this.tryPerchAbove()) return;
     if (blocked || p.y + P.height > col.y1 - 0.05) {
       if (vy > 0 && this.tryMantleAbove()) return;
       p.y = oldY; c.theta = oldTh;
@@ -1160,22 +1279,29 @@ export class Player {
     }
   }
 
-  // ================================================================ GRIND
+  // ================================================================ GRIND / BRANCH RUN
+  // A rail can be ridden two ways: 'grind' (THPS-style slide, momentum, tricks)
+  // or 'run' (feet on the branch, the stick drives you along it). Landing on a
+  // branch puts you in run mode; grab or slide kicks it into a grind.
   tryGrabRail(opts) {
     const g = this.grind;
-    const exclude = (r) => (r === g.lastRail && this.time - g.lastTime < 0.45);
-    const snapOpts = opts.auto
-      ? { reachH: 0.75, upReach: 0.35, downReach: 0.9, exclude }
-      : opts.fromGround ? { reachH: 1.4, upReach: 1.5, downReach: 0.6, exclude } : { reachH: 1.5, exclude };
+    const exclude = (r) => (r === g.lastRail && this.time - g.lastTime < (opts.auto ? 0.2 : 0.45));
+    let snapOpts;
+    // Auto-perching only happens on natural walkable rails (branches, logs).
+    if (opts.auto) snapOpts = { reachH: 0.85, upReach: 0.4, downReach: 1.0, exclude: (r) => exclude(r) || r.hang || (opts.mode !== 'grind' && r.kind !== 'branch' && r.kind !== 'log') };
+    else if (opts.fromGround) snapOpts = { reachH: 1.4, upReach: 1.5, downReach: 0.6, exclude };
+    else snapOpts = { reachH: 1.5, exclude };
     const snap = this.rails.findSnap(this.pos, this.vel, snapOpts);
     if (!snap) return false;
     const rail = snap.rail;
-    if (rail.hang && opts.auto) return false;
-    this.startGrind(rail, snap.s);
+    let mode = opts.mode || 'grind';
+    if (mode === 'run' && Math.abs(rail.tangentAt(snap.s, _t).y) > P.runMaxSlope) mode = 'grind';
+    if (rail.hang) mode = 'grind';
+    this.startGrind(rail, snap.s, mode);
     return true;
   }
 
-  startGrind(rail, s) {
+  startGrind(rail, s, mode = 'grind') {
     const g = this.grind;
     const t = rail.tangentAt(s, _t);
     const v = this.vel;
@@ -1188,22 +1314,46 @@ export class Player {
       const ref = this.inputMag > 0.3 ? this.inputDir : _v.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
       dir = ref.x * t.x + ref.z * t.z >= 0 ? 1 : -1;
     }
+    const fromAir = this.state === 'air';
     g.rail = rail;
     g.s = s;
     g.dir = dir;
-    g.speed = Math.max(Math.abs(along), hs * 0.85, rail.minSpeed);
+    g.mode = mode;
+    g.speed = mode === 'run' ? Math.abs(along) : Math.max(Math.abs(along), hs * 0.85, rail.minSpeed);
     g.dist = 0;
+    g.runDist = 0;
     g.trickT = -1;
     g.switch = false;
     g.lean = 0;
     g.entryTime = this.time;
+    g.balance = 0;
     this.cancelTricksForGrind();
     this.sliding = false;
     this.height = P.height;
     const np = this.railPos(rail, s, _v2);
     this.snapTo(np);
+    if (fromAir) this.landImpact = clamp(-v.y / 26, 0.1, 0.6);
     this.setState('grind');
-    this.emit('grindStart', { rail, speed: g.speed, pos: this.pos });
+    if (mode === 'grind') this.emit('grindStart', { rail, speed: g.speed, pos: this.pos });
+    else this.emit('perch', { rail, speed: g.speed, pos: this.pos, fromAir, impact: Math.max(0, -v.y) });
+  }
+
+  /** Switch between running on a branch and grinding it, keeping momentum. */
+  setRailMode(mode) {
+    const g = this.grind;
+    if (g.mode === mode) return;
+    g.mode = mode;
+    g.dist = 0;
+    if (mode === 'grind') {
+      g.speed = Math.max(g.speed, g.rail.minSpeed + 1.5);
+      // Face along the stick if it points along the rail.
+      const t = g.rail.tangentAt(g.s, _t);
+      const st = (this.inputDir.x * t.x + this.inputDir.z * t.z) * this.inputMag;
+      if (g.speed < 3 && Math.abs(st) > 0.3) g.dir = Math.sign(st);
+      this.emit('grindStart', { rail: g.rail, speed: g.speed, pos: this.pos });
+    } else {
+      this.emit('grindEnd', { rail: g.rail, dist: g.dist });
+    }
   }
 
   cancelTricksForGrind() {
@@ -1226,37 +1376,68 @@ export class Player {
   updateGrind(dt) {
     const g = this.grind, inp = this.input, rail = g.rail;
     const t = rail.tangentAt(g.s, _t).multiplyScalar(g.dir);
-    // Gravity along the rail.
-    g.speed += -P.grindGravity * t.y * dt;
-    g.speed -= g.speed * P.grindFriction * dt;
-    if (inp.held('slide') && !rail.hang) g.speed += 1.2 * dt; // tuck for speed
-    if (g.speed < 0) {
-      // Rolled back on an uphill section.
-      g.dir = -g.dir;
-      g.speed = -g.speed;
-      if (rail.oneWay) { this.exitRail(false); return; }
+    if (g.mode === 'run') {
+      // Feet on the branch: the stick (projected on the branch) drives you.
+      if (Math.abs(t.y) > P.runMaxSlope) { this.setRailMode('grind'); }
+      else {
+        const stick = (this.inputDir.x * t.x + this.inputDir.z * t.z) * this.inputMag; // + forward along dir
+        const target = Math.abs(stick) > 0.2 ? Math.sign(stick) * P.runSpeed * Math.min(1, Math.abs(stick) * 1.15) : 0;
+        let u = g.speed; // signed speed along dir
+        if (target === 0) u = approach(u, 0, P.decel * 0.8 * dt);
+        else if (Math.sign(target) === Math.sign(u) && Math.abs(u) > Math.abs(target)) u = approach(u, target, (P.overDecay + (Math.abs(u) - Math.abs(target)) * 0.12) * dt);
+        else u = approach(u, target, P.accel * (Math.sign(target) !== Math.sign(u) && Math.abs(u) > 1 ? 1.6 : 1.1) * dt);
+        u += -t.y * 9 * dt; // downhill helps, uphill drags
+        // Holding the stick across the branch steps off it.
+        const side = (this.inputDir.x * -t.z + this.inputDir.z * t.x) * this.inputMag;
+        g.sideT = Math.abs(stick) < 0.45 && Math.abs(side) > 0.7 ? (g.sideT || 0) + dt : 0;
+        if (g.sideT > 0.22) {
+          g.sideT = 0;
+          this.exitRail(false);
+          this.vel.x += this.inputDir.x * 3.5; this.vel.z += this.inputDir.z * 3.5;
+          this.vel.y = 2;
+          return;
+        }
+        if (u < 0) { g.dir = -g.dir; u = -u; t.multiplyScalar(-1); }
+        g.speed = u;
+      }
     }
-    if (Math.abs(t.y) < 0.15 && g.speed < rail.minSpeed * 0.7) g.speed = approach(g.speed, rail.minSpeed * 0.7, 4 * dt);
-    // Above cruising speed, grinds bleed speed a little faster (keeps long descents sane).
-    if (g.speed > 16) g.speed -= (g.speed - 16) * 0.35 * dt;
-    g.speed = Math.min(g.speed, P.grindMax);
-    if (rail.hang) {
-      // Zip vines brake near the end so you can stick the landing.
-      const remaining = g.dir > 0 ? rail.length - g.s : g.s;
-      if (remaining < 9) g.speed = approach(g.speed, 6.5, 16 * dt);
+    if (g.mode === 'grind') {
+      // Gravity along the rail.
+      g.speed += -P.grindGravity * t.y * dt;
+      g.speed -= g.speed * P.grindFriction * dt;
+      if (inp.held('slide') && !rail.hang) g.speed += 1.2 * dt; // tuck for speed
+      if (g.speed < 0) {
+        // Rolled back on an uphill section.
+        g.dir = -g.dir;
+        g.speed = -g.speed;
+        if (rail.oneWay) { this.exitRail(false); return; }
+      }
+      if (Math.abs(t.y) < 0.15 && g.speed < rail.minSpeed * 0.7) g.speed = approach(g.speed, rail.minSpeed * 0.7, 4 * dt);
+      // Above cruising speed, grinds bleed speed a little faster (keeps long descents sane).
+      if (g.speed > 17) g.speed -= (g.speed - 17) * 0.35 * dt;
+      g.speed = Math.min(g.speed, P.grindMax);
+      if (rail.hang) {
+        // Zip vines brake near the end so you can stick the landing.
+        const remaining = g.dir > 0 ? rail.length - g.s : g.s;
+        if (remaining < 9) g.speed = approach(g.speed, 6.5, 16 * dt);
+      }
     }
     const ds = g.dir * g.speed * dt;
     g.s += ds;
-    g.dist += Math.abs(ds);
+    if (g.mode === 'grind') g.dist += Math.abs(ds); else g.runDist += Math.abs(ds);
+    const tt = rail.tangentAt(clamp(g.s, 0, rail.length), _t).multiplyScalar(g.dir);
 
     // Steering input leans the body.
-    const right = _v.set(-t.z, 0, t.x);
+    const right = _v.set(-tt.z, 0, tt.x);
     const lean = (this.inputDir.x * right.x + this.inputDir.z * right.z) * this.inputMag;
     g.lean = lerp(g.lean, lean, 1 - Math.exp(-dt * 8));
 
     if (g.s < 0 || g.s > rail.length) {
       if (this.continueRail()) return;
       g.s = clamp(g.s, 0, rail.length);
+      // The branch ends at a trunk: grab on and climb.
+      const trunk = this.trunkNear(this.railPos(rail, g.s, _v3), 1.4);
+      if (trunk) { this.exitRail(false, false, false, true); this.startClimb(trunk); return; }
       this.exitRail(false);
       return;
     }
@@ -1270,28 +1451,62 @@ export class Player {
         g.trickT = -1;
       }
     }
-    this.vel.copy(t).multiplyScalar(g.speed);
-    this.yaw = Math.atan2(t.x, t.z);
+    this.vel.copy(tt).multiplyScalar(g.speed);
+    if (g.mode === 'grind' || g.speed > 0.4) this.yaw = Math.atan2(tt.x, tt.z);
+    else if (this.inputMag > 0.3) this.yaw = approachAngle(this.yaw, Math.atan2(this.inputDir.x, this.inputDir.z), 10 * dt);
+
+    if (g.mode === 'run') {
+      const strideLen = clamp(1.0 + g.speed * 0.36, 1.2, 5.2);
+      this.footPhase += (g.speed * dt) / strideLen;
+      if (Math.floor(this.footPhase * 2) !== Math.floor(this.lastStepPhase * 2) && g.speed > 1) this.emit('footstep', { tag: 'bark', speed: g.speed, pos: this.pos });
+      this.lastStepPhase = this.footPhase;
+    }
 
     // Actions.
-    if (inp.pressed('jump', 0.12)) { this.exitRail(true); return; }
-    if (inp.pressed('grab') && this.time - g.entryTime > 0.25) { inp.consume('grab'); this.exitRail(false, true); return; }
-    if (!rail.hang && g.trickT < 0) {
-      if (inp.pressed('trick', 0.1)) { inp.consume('trick'); g.trickT = 0; g.trickKind = 'flip'; this.emit('grindTrick', { kind: 'flip' }); }
-      else if (inp.pressed('spinL', 0.1) || inp.pressed('spinR', 0.1)) {
-        inp.consume('spinL'); inp.consume('spinR');
-        g.trickT = 0; g.trickKind = 'switch'; this.emit('grindTrick', { kind: 'switch' });
+    if (inp.pressed('jump', P.jumpBuffer)) { this.exitRail(true); return; }
+    if (!rail.hang) {
+      if (g.mode === 'run' && (inp.pressed('grab', 0.1) || inp.pressed('slide', 0.1))) {
+        inp.consume('grab'); inp.consume('slide');
+        this.setRailMode('grind');
+      } else if (g.mode === 'grind' && g.trickT < 0 && this.time - g.entryTime > 0.1) {
+        if (inp.pressed('trick', 0.1)) { inp.consume('trick'); g.trickT = 0; g.trickKind = 'flip'; this.emit('grindTrick', { kind: 'flip' }); }
+        else if (inp.pressed('spinL', 0.1) || inp.pressed('spinR', 0.1)) {
+          inp.consume('spinL'); inp.consume('spinR');
+          g.trickT = 0; g.trickKind = 'switch'; this.emit('grindTrick', { kind: 'switch' });
+        }
       }
-    }
-    // Hit something solid while grinding (e.g. a trunk)?
+    } else if (inp.pressed('grab') && this.time - g.entryTime > 0.25) { inp.consume('grab'); this.exitRail(false, true); return; }
+    // Ran into something solid (a trunk at the base of the branch, a wall)?
     const cs = this.world.capsuleContacts(this.pos, P.radius * 0.8, P.height * 0.9, this.contacts);
     for (const c of cs) {
-      if (Math.abs(c.ny) < 0.45 && c.depth > 0.22 && !(c.col && c.col.data && c.col.data.rail === rail)) {
-        const fwd = c.nx * t.x + c.nz * t.z;
-        if (fwd < -0.5) { this.exitRail(false, true, true); return; }
+      if (Math.abs(c.ny) < 0.45 && c.depth > 0.12 && !(c.col && c.col.data && c.col.data.rail === rail)) {
+        const fwd = c.nx * tt.x + c.nz * tt.z;
+        if (fwd < -0.4) {
+          if (c.col && c.col.climbable && c.col.type === 'cyl') { this.exitRail(false, false, false, true); this.startClimb(c.col); return; }
+          if (g.mode === 'run') {
+            // Stop against it.
+            g.s -= ds;
+            g.speed = 0;
+            this.railPos(rail, g.s, this.pos);
+            break;
+          }
+          if (c.depth > 0.22) { this.exitRail(false, true, true); return; }
+        }
       }
     }
     this.checkWater();
+  }
+
+  /** A climbable trunk whose surface is within `reach` of p. */
+  trunkNear(p, reach) {
+    const cs = this.world.query(p.x - reach - 3, p.y - 1, p.z - reach - 3, p.x + reach + 3, p.y + 2, p.z + reach + 3, []);
+    let best = null, bd = reach;
+    for (const c of cs) {
+      if (c.type !== 'cyl' || !c.climbable || p.y < c.y0 || p.y > c.y1 - 1) continue;
+      const d = Math.hypot(p.x - c.x, p.z - c.z) - c.r;
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best;
   }
 
   continueRail() {
@@ -1313,18 +1528,18 @@ export class Player {
       if (!best || tmp.dist < best.dist) best = { rail: r, s: tmp.s, dir: Math.sign(al), dist: tmp.dist };
     }
     if (!best) return false;
-    this.emit('trick', { name: g.rail.name, base: 100 + g.dist * 30 * g.rail.info.points, kind: 'grind', dist: g.dist });
+    if (g.mode === 'grind') this.emit('trick', { name: g.rail.name, base: 100 + g.dist * 30 * g.rail.info.points, kind: 'grind', dist: g.dist });
     g.rail = best.rail;
     g.s = best.s + best.dir * overshoot;
     g.dir = best.dir;
     g.dist = 0;
     this.railPos(g.rail, clamp(g.s, 0, g.rail.length), _v);
     this.snapTo(_v);
-    this.emit('railTransfer', { rail: g.rail });
+    if (g.mode === 'grind') this.emit('railTransfer', { rail: g.rail });
     return true;
   }
 
-  exitRail(jump, hop = false, bumped = false) {
+  exitRail(jump, hop = false, bumped = false, quiet = false) {
     const g = this.grind, inp = this.input, rail = g.rail;
     const t = rail.tangentAt(clamp(g.s, 0, rail.length), _t).multiplyScalar(g.dir);
     const v = this.vel;
@@ -1334,20 +1549,33 @@ export class Player {
       if (g.trickKind === 'flip') this.emit('trick', { name: 'Flip Grind', base: 300, kind: 'grindtrick' });
       g.trickT = -1;
     }
-    if (g.dist > 0.6) this.emit('trick', { name: rail.name, base: 100 + g.dist * 30 * rail.info.points, kind: 'grind', dist: g.dist });
+    if (g.mode === 'grind' && g.dist > 0.6) this.emit('trick', { name: rail.name, base: 100 + g.dist * 30 * rail.info.points, kind: 'grind', dist: g.dist });
+    if (g.mode === 'run' && g.runDist > 5) this.emit('trick', { name: 'Branch Run', base: 30 + g.runDist * 6, kind: 'run' });
     if (jump) {
       inp.consume('jump');
       const right = _v.set(-t.z, 0, t.x).normalize();
       const lat = (this.inputDir.x * right.x + this.inputDir.z * right.z) * this.inputMag;
-      v.y = Math.max(v.y, 0) * 0.5 + (rail.hang ? 6 : P.grindJump);
-      v.x += right.x * lat * 4.5; v.z += right.z * lat * 4.5;
+      if (g.mode === 'run') {
+        // Jumping off a branch works like a ground jump: the stick steers freely.
+        const hs = Math.hypot(v.x, v.z);
+        if (this.inputMag > 0.3) {
+          const sp = Math.max(hs, P.runSpeed * this.inputMag * 0.85);
+          const fx = this.inputDir.x * 0.75 + (hs > 0.5 ? v.x / hs : 0) * 0.25, fz = this.inputDir.z * 0.75 + (hs > 0.5 ? v.z / hs : 0) * 0.25;
+          const fl = Math.hypot(fx, fz) || 1;
+          v.x = fx / fl * sp; v.z = fz / fl * sp;
+        }
+        v.y = P.jumpVel + Math.max(0, v.y) * 0.4;
+      } else {
+        v.y = Math.max(v.y, 0) * 0.5 + (rail.hang ? 6 : P.grindJump);
+        v.x += right.x * lat * 4.5; v.z += right.z * lat * 4.5;
+      }
       this.jumpCut = true;
-      this.emit('jump', { name: rail.hang ? 'Zip Drop' : 'Rail Hop', kind: 'rail', pos: this.pos });
+      this.emit('jump', { name: rail.hang ? 'Zip Drop' : g.mode === 'run' ? 'Branch Hop' : 'Rail Hop', kind: 'rail', pos: this.pos });
     } else {
-      if (!rail.hang) v.y += hop ? 4 : 0.8;
+      if (!rail.hang && g.mode === 'grind') v.y += hop ? 4 : 0.8;
       this.jumpCut = false;
     }
-    this.emit('grindEnd', { rail, dist: g.dist });
+    if (g.mode === 'grind') this.emit('grindEnd', { rail, dist: g.dist, quiet });
     g.lastRail = rail;
     g.lastTime = this.time;
     g.rail = null;
@@ -1358,9 +1586,9 @@ export class Player {
   }
 
   // ================================================================ SWING
-  tryGrabVine(reach) {
+  tryGrabVine(reach, auto = false) {
     const sw = this.swing;
-    const exclude = (v) => v === sw.lastVine && this.time - sw.lastTime < 0.45;
+    const exclude = (v) => v === sw.lastVine && this.time - sw.lastTime < (auto ? 0.6 : 0.45);
     const hand = _v.set(this.pos.x, this.pos.y + P.handHeight - 0.1, this.pos.z);
     let g = this.vines.findGrab(hand, reach, exclude);
     if (!g) {
@@ -1389,6 +1617,8 @@ export class Player {
     vine.held = true;
     vine.holdDist = sw.d;
     vine.hand.copy(H);
+    // Catching a vine at speed soaks up some of it (keeps the arc sane).
+    if (this.vel.length() > P.swingCatchMax) this.vel.setLength(P.swingCatchMax);
     if (this.vel.length() < 3) {
       const f = this.inputMag > 0.2 ? this.inputDir : _v2.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
       this.vel.addScaledVector(f, 3);
@@ -1416,7 +1646,9 @@ export class Player {
       const dn = d.x * rope.x + d.z * rope.z;
       _v2.set(d.x - rope.x * dn, -rope.y * dn, d.z - rope.z * dn);
       const sp = v.length();
-      if (sp < P.swingMax) v.addScaledVector(_v2, P.swingPump * this.inputMag * dt * (rope.y < -0.3 ? 1 : 0.4));
+      // Pumping works through the bottom of the arc, like on a real swing.
+      const bottom = smoothstep(0.55, 0.95, -rope.y);
+      if (sp < P.swingMax || _v2.dot(v) < 0) v.addScaledVector(_v2, P.swingPump * this.inputMag * dt * (0.25 + 0.75 * bottom));
     }
     v.multiplyScalar(1 - 0.06 * dt);
     H.addScaledVector(v, dt);

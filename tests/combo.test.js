@@ -38,7 +38,7 @@ test('bailing loses the combo', () => {
   const lost = [];
   g.game.events.on('comboLost', (e) => lost.push(e));
   g.combo.add('Test Trick', 500, {});
-  g.player.placeAt(new THREE.Vector3(-10, g.game.world.terrain.heightAt(-10, 20) + 1.2, 20), 0);
+  g.player.placeAt(new THREE.Vector3(-20, g.game.world.terrain.heightAt(-20, -4) + 1.2, -4), 0);
   g.player.setState('air');
   g.player.startFlip('back');
   g.player.flip.angle = 1.5;
@@ -61,13 +61,13 @@ test('gap is detected from launch region to landing region', () => {
   const g = withCombo();
   const gaps = [];
   g.game.events.on('gap', (e) => gaps.push(e));
-  const gap = g.level.ctx.gaps.find((x) => x.name === 'Hut Hop');
+  const gap = g.level.ctx.gaps.find((x) => x.name === 'Ruin Swing');
   const from = gap.from.getCenter(new THREE.Vector3());
   const to = gap.to.getCenter(new THREE.Vector3());
   g.player.launchPos.copy(from);
   g.game.events.emit('land', { pos: to, impact: 5, tag: 'wood' });
   assert.equal(gaps.length, 1);
-  assert.equal(gaps[0].name, 'Hut Hop');
+  assert.equal(gaps[0].name, 'Ruin Swing');
 });
 
 test('slide distance does not carry over between slides', () => {

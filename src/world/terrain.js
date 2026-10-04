@@ -1,25 +1,25 @@
-// Terrain shape: rolling jungle floor, a river gorge fed by a waterfall pool,
-// a northern cliff, a western mud-slide hill and rising rim hills.
+// Terrain shape for "The Grotto": a compact jungle bowl ringed by cliffs.
+// A waterfall drops off the north rim into a pool, the floor rises into
+// skateable banks toward the cliff base, and a mud chute curls down the
+// east bank from a cliff ledge.
 import { clamp, smoothstep, fbm2, noise2, lerp } from '../core/math.js';
 
 export const WORLD = {
-  size: 240,
-  min: -120,
-  res: 240,
-  waterLevel: -1.0,
-  bounds: 92, // invisible boundary (half extent)
-  cliffTop: 26,
+  size: 128,
+  min: -64,
+  res: 128,
+  waterLevel: -0.7,
+  bounds: 41, // invisible boundary radius
+  cliffTop: 23,
 };
 
-// River centerline from the waterfall pool to the south edge.
-export const RIVER = [
-  [0, -56], [5, -42], [3, -28], [-4, -14], [-3, 0], [4, 14], [9, 28], [7, 44], [3, 58], [9, 74], [16, 92], [22, 120],
-];
-export const POOL = { x: 0, z: -60, r: 13 };
+export const POOL = { x: -1, z: -24, r: 8.5 };
+// Waterfall: lip on the north rim, splashing into the pool.
+export const FALLS = { x: -1, top: 21.6, zTop: -39.2, bottom: -0.7, zBottom: -31.2, width: 5.2 };
 
-// Mud slide centerline (x, z, groundY target) down the west hill.
+// Mud chute centerline (x, z, ground y) from the east cliff ledge down to the floor.
 export const MUDSLIDE = [
-  [-70, -46, 16.5], [-71, -34, 14.5], [-68, -22, 12.2], [-62, -10, 9.5], [-57, 2, 6.8], [-54, 13, 4.2], [-51, 22, 2.2], [-48, 28, 1.4],
+  [33.5, -10, 12.6], [34.2, -1, 10.6], [32.6, 8, 8.2], [29, 15.4, 5.6], [23.4, 20.2, 3.0], [18.2, 21.4, 1.4], [14.2, 18.4, 0.9],
 ];
 
 function distToPolyline(x, z, pts) {
@@ -28,110 +28,128 @@ function distToPolyline(x, z, pts) {
     const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
     const dx = bx - ax, dz = bz - az;
     const l2 = dx * dx + dz * dz;
-    let t = ((x - ax) * dx + (z - az) * dz) / l2;
-    t = clamp(t, 0, 1);
-    const px = ax + dx * t, pz = az + dz * t;
-    const d = Math.hypot(x - px, z - pz);
+    const t = clamp(((x - ax) * dx + (z - az) * dz) / l2, 0, 1);
+    const d = Math.hypot(x - ax - dx * t, z - az - dz * t);
     if (d < best) { best = d; bt = t; bi = i; }
   }
   return { d: best, i: bi, t: bt };
 }
 
-export function riverDist(x, z) {
-  return distToPolyline(x, z, RIVER).d;
-}
-
 function mudInfo(x, z) {
   const r = distToPolyline(x, z, MUDSLIDE);
   const a = MUDSLIDE[r.i], b = MUDSLIDE[r.i + 1];
-  return { d: r.d, y: lerp(a[2], b[2], r.t), end: r.i === MUDSLIDE.length - 2 && r.t > 0.95 };
+  return { d: r.d, y: lerp(a[2], b[2], r.t), i: r.i, t: r.t };
 }
 
-const RIVER_HALF = 6.5; // half width of the water channel
-const BANK = 5.0;
+/** Distance from the bowl center, slightly elliptical and wobbly so the rim reads natural. */
+function rimDist(x, z) {
+  const a = Math.atan2(z, x);
+  const wob = Math.sin(a * 3 + 0.7) * 1.2 + Math.sin(a * 7 + 2.1) * 0.6 + noise2(Math.cos(a) * 2.5, Math.sin(a) * 2.5) * 1.6;
+  return Math.hypot(x, z * 1.04) + wob;
+}
 
-/** Base terrain height before carving. */
 function baseHeight(x, z) {
-  let h = fbm2(x * 0.018 + 3.1, z * 0.018 - 1.7, 4) * 2.2 + noise2(x * 0.09, z * 0.09) * 0.35;
-  // Rim hills rising toward the boundary.
-  const rim = Math.max(Math.abs(x), Math.abs(z * 1.0));
-  h += smoothstep(80, 104, rim) * (18 + fbm2(x * 0.05, z * 0.05, 3) * 8);
-  // Northern cliff plateau.
-  const away = smoothstep(7, 18, Math.abs(x));
-  const edgeN = noise2(x * 0.08, 7.3) * 1.2 + (noise2(x * 0.05, 2.1) * 2.2 + noise2(x * 0.21, 5.5) * 0.7) * away;
-  const cliffT = smoothstep(-67.5, -74.5, z + edgeN);
-  h = lerp(h, WORLD.cliffTop + fbm2(x * 0.06, z * 0.06, 3) * 0.6, cliffT);
-  // Bulges and ledges on the cliff face.
-  h += cliffT * (1 - cliffT) * 4 * (fbm2(x * 0.12, z * 0.3 + 4.0, 3) * 5) * away;
-  // Western hill for the mud slide.
-  const hill = smoothstep(-44, -70, x) * smoothstep(40, 5, z) * smoothstep(-80, -55, z) * 17;
-  h = Math.max(h, hill + fbm2(x * 0.05, z * 0.05, 3) * 1.2 * smoothstep(-44, -60, x));
+  // Gentle floor undulation.
+  let h = fbm2(x * 0.045 + 3.1, z * 0.045 - 1.7, 3) * 0.6 + noise2(x * 0.15, z * 0.15) * 0.12;
+  const r = rimDist(x, z);
+  // Skate-bowl banks rising toward the cliffs.
+  const bankT = smoothstep(27, 37.5, r);
+  h += bankT * bankT * 6.5;
+  // Cliff wall with bulges, capped by the rim plateau.
+  const cliffT = smoothstep(37.2, 41.5, r + noise2(x * 0.11, z * 0.11) * 1.4);
+  const top = WORLD.cliffTop + fbm2(x * 0.05, z * 0.05, 3) * 2.5;
+  h = lerp(h, top, cliffT);
+  h += cliffT * (1 - cliffT) * 4 * fbm2(x * 0.17, z * 0.17 + 4.0, 3) * 3.5;
+  // East shelf: a ledge partway up the east cliff where the mud chute starts.
+  const shelf = smoothstep(27, 30, x) * smoothstep(-20, -14, z) * smoothstep(12, 5, z);
+  h = Math.max(h, shelf * 12.6 + (1 - shelf) * -10);
   return h;
 }
 
 export function terrainHeight(x, z) {
   let h = baseHeight(x, z);
-  // Mud slide trough.
+  // Mud chute: a smooth trough down the east bank.
   const m = mudInfo(x, z);
-  if (m.d < 8 && x < -40) {
-    const trough = m.y - 0.6 + Math.pow(m.d / 4.5, 2) * 0.9;
-    const w = smoothstep(8, 4.5, m.d);
-    h = lerp(h, Math.min(h, trough), w);
-    if (m.d < 4.5) h = Math.min(h, trough);
-  }
-  // River channel.
-  const rd = riverDist(x, z);
-  if (rd < RIVER_HALF + BANK) {
-    const bed = -3.4 + noise2(x * 0.2, z * 0.2) * 0.3;
-    const bankT = smoothstep(RIVER_HALF + BANK, RIVER_HALF - 1.5, rd);
-    h = lerp(h, bed, bankT);
+  if (m.d < 9 && x > 8) {
+    const trough = m.y - 0.55 + Math.pow(m.d / 4.2, 2) * 1.1;
+    const lip = m.y + 1.1 - m.d * 0.05;
+    const w = smoothstep(9, 4.5, m.d);
+    // Build the chute up out of the bank where needed, then carve the trough.
+    let hh = Math.max(h, lerp(h, lip, w * 0.85));
+    if (m.d < 4.6) hh = trough;
+    else hh = lerp(hh, Math.min(hh, trough + (m.d - 4.6) * 0.8), smoothstep(9, 4.6, m.d));
+    h = hh;
   }
   // Waterfall pool.
-  const pd = Math.hypot(x - POOL.x, z - POOL.z);
-  if (pd < POOL.r + 5 && z > -72) {
-    const t = smoothstep(POOL.r + 5, POOL.r - 2, pd);
-    h = lerp(h, -4.5, t);
+  const pd = Math.hypot(x - POOL.x, (z - POOL.z) * 0.92);
+  if (pd < POOL.r + 4.5) {
+    const t = smoothstep(POOL.r + 4.5, POOL.r - 2, pd);
+    h = lerp(h, -3.2 + noise2(x * 0.3, z * 0.3) * 0.3, t);
+  }
+  // Plunge basin under the falls carved into the cliff foot.
+  const fx = Math.abs(x - FALLS.x);
+  if (fx < 7 && z < -28 && z > -40) {
+    const t = smoothstep(7, 3, fx) * smoothstep(-40, -35, z);
+    h = lerp(h, Math.min(h, -2.8), t);
+  }
+  // Cliff-top stream channel feeding the falls.
+  if (z < -38.5 && fx < 5) {
+    const t = smoothstep(5, 2.5, fx) * smoothstep(-39, -41, z);
+    h = lerp(h, WORLD.cliffTop - 1.6, t);
   }
   return h;
 }
 
 export function terrainTag(x, z) {
   const m = mudInfo(x, z);
-  if (m.d < 3.6 && x < -40) return 'mud';
-  const rd = riverDist(x, z);
-  if (rd < RIVER_HALF + 2.5) return 'sand';
-  if (z < -68) return 'rock';
+  if (m.d < 3.8 && x > 8) return 'mud';
+  if (Math.hypot(x - POOL.x, z - POOL.z) < POOL.r + 2.5) return 'sand';
+  if (rimDist(x, z) > 37.5) return 'rock';
   return 'ground';
 }
 
 /** Water surface height at (x,z) or -Infinity if dry. */
 export function waterHeight(x, z) {
-  const rd = riverDist(x, z);
-  const pd = Math.hypot(x - POOL.x, z - POOL.z);
-  if (rd < RIVER_HALF + BANK + 1 || pd < POOL.r + 4) return WORLD.waterLevel;
-  // Cliff-top stream feeding the waterfall.
-  if (z < -74 && Math.abs(x) < 4.5) return WORLD.cliffTop - 0.4;
+  if (Math.hypot(x - POOL.x, z - POOL.z) < POOL.r + 5 || (Math.abs(x - FALLS.x) < 7 && z < -27 && z > -40.5)) return WORLD.waterLevel;
+  if (z < -38.5 && Math.abs(x - FALLS.x) < 4) return WORLD.cliffTop - 0.9;
   return -Infinity;
+}
+
+/** Surface flow direction of the water (for the water shader). */
+export function waterFlow(x, z) {
+  if (z < -38.5) return [0, 1];
+  // Spread away from where the falls land.
+  const dx = x - FALLS.x, dz = z - FALLS.zBottom;
+  const d = Math.hypot(dx, dz) || 1;
+  const k = clamp(1.2 - d / 10, 0.1, 1);
+  return [dx / d * k, dz / d * k];
+}
+
+/** Rough distance to moving water (for ambience). */
+export function waterDist(x, z) {
+  return Math.max(0, Math.hypot(x - POOL.x, z - POOL.z) - POOL.r);
 }
 
 /** Splat weights (grass, dirt, mud, rock) for terrain shading. */
 export function terrainSplat(x, z, h, ny) {
   let grass = 1, dirt = 0, mud = 0, rock = 0;
-  const n = fbm2(x * 0.04, z * 0.04, 3);
-  dirt = clamp(0.25 + n * 0.8, 0, 1);
-  const rd = riverDist(x, z);
-  const bank = smoothstep(RIVER_HALF + 4, RIVER_HALF, rd);
-  mud = Math.max(mud, bank);
+  const n = fbm2(x * 0.05, z * 0.05, 3);
+  dirt = clamp(0.2 + n * 0.9, 0, 1);
+  // Worn dirt paths between the trees.
+  dirt = Math.max(dirt, smoothstep(3.5, 1, Math.abs(Math.hypot(x, z - 4) - 13)) * 0.7);
   const pd = Math.hypot(x - POOL.x, z - POOL.z);
-  mud = Math.max(mud, smoothstep(POOL.r + 4, POOL.r, pd));
+  mud = Math.max(mud, smoothstep(POOL.r + 3.5, POOL.r, pd));
   const md = mudInfo(x, z);
-  if (x < -40) mud = Math.max(mud, smoothstep(5.5, 3, md.d));
-  rock = smoothstep(0.82, 0.6, ny);
+  if (x > 8) mud = Math.max(mud, smoothstep(5.5, 3, md.d));
+  rock = smoothstep(0.8, 0.58, ny);
+  rock = Math.max(rock, smoothstep(37, 39, rimDist(x, z)) * 0.85);
   grass *= 1 - mud;
   dirt *= 1 - mud;
   grass *= 1 - rock;
   dirt *= 1 - rock;
   mud *= 1 - rock;
-  if (h < -1.5) { rock = Math.max(rock, 0.4); }
+  if (h < -1.2) rock = Math.max(rock, 0.4);
+  // Grass returns on the rim plateau.
+  if (h > WORLD.cliffTop - 3 && ny > 0.85) { grass = 0.8; rock = 0.2; mud = 0; dirt = 0; }
   return [grass, dirt, mud, rock];
 }

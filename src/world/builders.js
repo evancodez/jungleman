@@ -149,15 +149,6 @@ export function branch(ctx, pts, o = {}) {
   const r0 = o.r0 ?? 0.6, r1 = o.r1 ?? 0.3;
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   const len = curve.getLength();
-  // Colliders: capsules every ~1.6m.
-  if (o.walk !== false) {
-    const n = Math.max(1, Math.ceil(len / 1.6));
-    for (let i = 0; i < n; i++) {
-      const a = curve.getPointAt(i / n), b = curve.getPointAt((i + 1) / n);
-      const rr = lerp(r0, r1, (i + 0.5) / n) * 0.96;
-      ctx.world.add(new CapsuleCollider(a, b, rr, 'bark', { noMantle: rr < 0.25, data: o.railRef || null }));
-    }
-  }
   let rail = null;
   if (o.grind !== false) {
     // Rail runs along the top of the branch; trim the ends slightly.
@@ -168,11 +159,22 @@ export function branch(ctx, pts, o = {}) {
     rail = new Rail(rpts, { kind: o.kind === 'root' ? 'log' : o.railKind || 'branch', r0: lerp(r0, r1, t0) * 0.95, r1: lerp(r0, r1, t1) * 0.95, name: o.name });
     ctx.rails.add(rail);
   }
+  // Colliders: capsules every ~1.6m.
+  if (o.walk !== false) {
+    const n = Math.max(1, Math.ceil(len / 1.6));
+    for (let i = 0; i < n; i++) {
+      const a = curve.getPointAt(i / n), b = curve.getPointAt((i + 1) / n);
+      const rr = lerp(r0, r1, (i + 0.5) / n) * 0.96;
+      ctx.world.add(new CapsuleCollider(a, b, rr, 'bark', { noMantle: rr < 0.25, data: rail ? { rail } : null }));
+    }
+  }
   if (ctx.visual) {
     const segs = Math.max(8, Math.ceil(len * 1.5));
     const radial = r0 > 0.6 ? 12 : 8;
-    const g = taperedTube(curve, segs, radial, (t) => lerp(r0, r1, Math.pow(t, 0.9)), { noise: 0.1, seed: pts[0].x, uvAround: Math.max(1, Math.round(r0 * 3)), uvLen: 2.2, capEnd: true });
+    const cut = o.cut ? 'flat' : 'dome';
+    const g = taperedTube(curve, segs, radial, (t) => lerp(r0, r1, Math.pow(t, 0.9)), { noise: 0.1, seed: pts[0].x, uvAround: Math.max(1, Math.round(r0 * 3)), uvLen: 2.2, capStart: o.capStart ?? cut, capEnd: o.capEnd ?? cut });
     addGeo(ctx, o.mat || 'branch', g);
+    for (const cg of g.userData.caps) addGeo(ctx, 'endGrain', cg);
     if (o.leaves !== false) {
       const R = rng(Math.floor(pts[0].x * 31 + pts[0].z * 17));
       // Leaf clumps along the outer half and at the tip.
@@ -546,6 +548,74 @@ export function stairs(ctx, o) {
     const c = V().addVectors(ra, rb).multiplyScalar(0.5).add(V(0, h / 2, 0));
     solid(ctx, { c: [c.x, c.y, c.z], size: [0.6, h + 0.6, len], rotX: -pitch, rotY: yaw, mat: 'stone', tag: 'stone', tile: 2, noMantle: true });
   }
+}
+
+/** Fallen log lying on the ground: grindable, walkable, with sawn end-grain caps. */
+export function log(ctx, a, b, r, o = {}) {
+  const m = V().addVectors(a, b).multiplyScalar(0.5);
+  m.y += o.arch ?? 0.1;
+  return branch(ctx, [a, m, b], { r0: r, r1: r * (o.taper ?? 0.85), name: o.name || 'Log Ride', railKind: 'log', leaves: false, mat: 'bark', cut: true, hangers: false });
+}
+
+/**
+ * Octagonal plank deck wrapped around a trunk (inner radius rIn, outer rOut).
+ */
+export function ringDeck(ctx, cx, cz, y, rIn, rOut, o = {}) {
+  const n = 8;
+  const th = 0.4;
+  const rot0 = o.rot ?? Math.PI / 8;
+  const mid = (rIn + rOut) / 2;
+  const depth = rOut - rIn;
+  for (let i = 0; i < n; i++) {
+    const a = rot0 + (i / n) * Math.PI * 2;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    // Width of the octagon side at the middle radius (plus overlap).
+    const w = 2 * Math.tan(Math.PI / n) * rOut + 0.1;
+    const c = [cx + ca * mid, y - th / 2, cz + sa * mid];
+    solid(ctx, { c, size: [w, th, depth], rotY: Math.atan2(ca, sa), mat: 'planks', tag: 'wood', tile: 2.2, ao: false, noMantle: false });
+    if (ctx.visual) {
+      // Rim beam under the outer edge.
+      const q = new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), Math.atan2(ca, sa));
+      const g = boxGeo(w + 0.1, 0.4, 0.3, 2);
+      g.applyMatrix4(_m.compose(V(cx + ca * (rOut - 0.15), y - th - 0.15, cz + sa * (rOut - 0.15)), q, V(1, 1, 1)));
+      addGeo(ctx, 'wood', g);
+      // Diagonal brace from the trunk.
+      const b0 = V(cx + ca * rIn * 0.9, y - 2.2, cz + sa * rIn * 0.9), b1 = V(cx + ca * (rOut - 0.5), y - th - 0.2, cz + sa * (rOut - 0.5));
+      if (i % 2 === 0) addGeo(ctx, 'wood', taperedTube(new THREE.LineCurve3(b0, b1), 2, 6, () => 0.13, { noise: 0, uvLen: 2 }));
+    }
+  }
+  // Low railing posts with a rope on part of the edge (purely visual).
+  return { cx, cz, y, rOut };
+}
+
+/** Bracket fungus shelf on a trunk: a small walkable step. */
+export function fungusStep(ctx, cx, cz, trunkR, angle, y, size = 1.3) {
+  const ca = Math.cos(angle), sa = Math.sin(angle);
+  const px = cx + ca * (trunkR + size * 0.55), pz = cz + sa * (trunkR + size * 0.55);
+  const col = new CylinderCollider(px, pz, size, y - 0.35, y, 'fungus', { climbable: false });
+  ctx.world.add(col);
+  if (ctx.visual) {
+    const g = new THREE.SphereGeometry(1, 18, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    g.scale(size * 1.12, 0.32, size * 1.12);
+    // Flatten the side touching the trunk.
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i);
+      const d = -(x * ca + z * sa);
+      if (d > size * 0.45) { const k = size * 0.45 - d; p.setXYZ(i, x + ca * -k, p.getY(i), z + sa * -k); }
+    }
+    g.computeVertexNormals();
+    const under = new THREE.CircleGeometry(size * 1.1, 18);
+    under.rotateX(Math.PI / 2);
+    under.scale(1, 1, 1);
+    for (const gg of [g, under]) {
+      gg.translate(px, y - 0.32, pz);
+    }
+    tint(g, 1, 1, 1);
+    addGeo(ctx, 'fungus', g);
+    addGeo(ctx, 'fungusUnder', under);
+  }
+  return col;
 }
 
 /** Collectible registration (rendered/animated by the collectibles system). */

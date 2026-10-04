@@ -2,28 +2,18 @@
 import * as THREE from 'three';
 import { shared } from './materials.js';
 import { SUN_DIR, SKY } from './sky.js';
-import { terrainHeight, RIVER, WORLD, POOL } from '../world/terrain.js';
+import { terrainHeight, waterHeight, waterFlow, WORLD, FALLS } from '../world/terrain.js';
 import { clamp } from '../core/math.js';
 
-function riverFlowAt(x, z) {
-  // Direction of the nearest river segment.
-  let best = Infinity, fx = 0, fz = 1;
-  for (let i = 0; i < RIVER.length - 1; i++) {
-    const [ax, az] = RIVER[i], [bx, bz] = RIVER[i + 1];
-    const dx = bx - ax, dz = bz - az;
-    const l2 = dx * dx + dz * dz;
-    const t = clamp(((x - ax) * dx + (z - az) * dz) / l2, 0, 1);
-    const d = Math.hypot(x - ax - dx * t, z - az - dz * t);
-    if (d < best) { best = d; const l = Math.sqrt(l2); fx = dx / l; fz = dz / l; }
-  }
-  const pd = Math.hypot(x - POOL.x, z - POOL.z);
-  const k = clamp((pd - 6) / 8, 0.15, 1);
-  return [fx * k, fz * k];
+// Water level at a point, sampled with a little slack so shorelines get covered.
+function levelAt(x, z) {
+  let best = -Infinity;
+  for (const [dx, dz] of [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) best = Math.max(best, waterHeight(x + dx, z + dz));
+  return best;
 }
 
 export function createWater(textures) {
-  const level = WORLD.waterLevel;
-  const x0 = -30, x1 = 45, z0 = -76, z1 = 125, step = 1;
+  const x0 = -16, x1 = 15, z0 = -60, z1 = -10, step = 0.5;
   const nx = Math.round((x1 - x0) / step), nz = Math.round((z1 - z0) / step);
   const pos = [], depth = [], flow = [], idx = [];
   const vid = new Map();
@@ -32,9 +22,10 @@ export function createWater(textures) {
     if (vid.has(key)) return vid.get(key);
     const x = x0 + i * step, z = z0 + j * step;
     const h = terrainHeight(x, z);
+    const level = levelAt(x, z);
     pos.push(x, level, z);
     depth.push(level - h);
-    const [fx, fz] = riverFlowAt(x, z);
+    const [fx, fz] = waterFlow(x, z);
     flow.push(fx, fz);
     const id = pos.length / 3 - 1;
     vid.set(key, id);
@@ -43,8 +34,11 @@ export function createWater(textures) {
   for (let j = 0; j < nz; j++) {
     for (let i = 0; i < nx; i++) {
       const x = x0 + i * step, z = z0 + j * step;
+      const level = levelAt(x + step / 2, z + step / 2);
+      if (level === -Infinity) continue;
       const hs = [terrainHeight(x, z), terrainHeight(x + step, z), terrainHeight(x, z + step), terrainHeight(x + step, z + step)];
       if (Math.min(...hs) > level + 0.05) continue;
+      if ([[x, z], [x + step, z], [x, z + step], [x + step, z + step]].some(([a, b]) => levelAt(a, b) !== level)) continue;
       const a = vert(i, j), b = vert(i + 1, j), c = vert(i, j + 1), d = vert(i + 1, j + 1);
       idx.push(a, c, b, b, c, d);
     }
@@ -130,7 +124,7 @@ export function createWater(textures) {
         vec2 sv = vec2(dot(vWPos.xz, vec2(-fd.y, fd.x)) * 0.35, dot(vWPos.xz, fd) * 0.04 - time * 0.35 * sp);
         float streak = smoothstep(0.72, 0.9, texture2D(noise, sv).b);
         foam += streak * sp * 0.22;
-        float poolDist = length((vWPos.xz - vec2(0.0, -64.4)) * vec2(0.7, 1.0));
+        float poolDist = length((vWPos.xz - vec2(${FALLS.x.toFixed(1)}, ${FALLS.zBottom.toFixed(1)})) * vec2(0.7, 1.0));
         float bub = texture2D(noise, vWPos.xz * 0.55 + vec2(0.0, time * 0.5)).g * 0.6 + texture2D(noise, vWPos.xz * 1.3 - vec2(time * 0.2, 0.0)).r * 0.4;
         foam += smoothstep(8.0, 1.5, poolDist) * smoothstep(0.5, 0.75, bub) * 0.9;
         col = mix(col, vec3(0.88, 0.92, 0.88), clamp(foam, 0.0, 1.0) * 0.7);

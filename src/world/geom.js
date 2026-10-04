@@ -99,16 +99,60 @@ export function taperedTube(curve, segs, radial, rFn, opts = {}) {
       idx.push(a, b, a + 1, b, b + 1, a + 1);
     }
   }
-  // Cap the thin end.
-  if (opts.capEnd) {
-    curve.getPointAt(1, P);
-    const c = pos.length / 3;
-    pos.push(P.x, P.y, P.z);
-    const tng = curve.getTangentAt(1);
-    nrm.push(tng.x, tng.y, tng.z);
-    uv.push(0.5, 0.5);
-    const base = segs * (radial + 1);
-    for (let j = 0; j < radial; j++) idx.push(base + j, c, base + j + 1);
+  // End caps. 'dome' closes the tube with a rounded bark tip (same geometry);
+  // 'flat' makes a separate disc (g.userData.caps) for an end-grain material.
+  const caps = [];
+  for (const [which, mode] of [[0, opts.capStart], [1, opts.capEnd === true ? 'dome' : opts.capEnd]]) {
+    if (!mode) continue;
+    const i = which ? segs : 0;
+    const base = i * (radial + 1);
+    curve.getPointAt(which, P);
+    const tng = curve.getTangentAt(which).clone();
+    if (!which) tng.negate(); // outward
+    const r = rFn(which);
+    if (mode === 'dome') {
+      const rings = 3;
+      let prev = base;
+      for (let k = 1; k <= rings; k++) {
+        const t = k / rings;
+        const out = Math.sin(t * Math.PI / 2) * r * 0.7;
+        const shrink = Math.cos(t * Math.PI / 2);
+        const start = pos.length / 3;
+        for (let j = 0; j <= radial; j++) {
+          const vx = pos[(base + j) * 3] - P.x, vy = pos[(base + j) * 3 + 1] - P.y, vz = pos[(base + j) * 3 + 2] - P.z;
+          pos.push(P.x + vx * shrink + tng.x * out, P.y + vy * shrink + tng.y * out, P.z + vz * shrink + tng.z * out);
+          nrm.push(0, 1, 0);
+          uv.push((j / radial) * uvAround, ((which ? 1 : 0) * len + (which ? 1 : -1) * t * r) / uvLen);
+        }
+        for (let j = 0; j < radial; j++) {
+          const a = prev + j, b = start + j;
+          if (which) idx.push(a, b, a + 1, b, b + 1, a + 1);
+          else idx.push(a, a + 1, b, b, a + 1, b + 1);
+        }
+        prev = start;
+      }
+    } else {
+      const cp = [], cu = [], ci = [];
+      cp.push(P.x + tng.x * 0.01, P.y + tng.y * 0.01, P.z + tng.z * 0.01);
+      cu.push(0.5, 0.5);
+      for (let j = 0; j <= radial; j++) {
+        const vx = pos[(base + j) * 3] - P.x, vy = pos[(base + j) * 3 + 1] - P.y, vz = pos[(base + j) * 3 + 2] - P.z;
+        cp.push(P.x + vx + tng.x * 0.01, P.y + vy + tng.y * 0.01, P.z + vz + tng.z * 0.01);
+        const a = (j / radial) * Math.PI * 2;
+        const k = Math.hypot(vx, vy, vz) / (r * 1.12);
+        cu.push(0.5 + Math.cos(a) * 0.5 * k, 0.5 + Math.sin(a) * 0.5 * k);
+      }
+      for (let j = 0; j < radial; j++) {
+        if (which) ci.push(0, j + 1, j + 2);
+        else ci.push(0, j + 2, j + 1);
+      }
+      const cg = new THREE.BufferGeometry();
+      cg.setAttribute('position', new THREE.Float32BufferAttribute(cp, 3));
+      cg.setAttribute('uv', new THREE.Float32BufferAttribute(cu, 2));
+      cg.setIndex(ci);
+      cg.computeVertexNormals();
+      caps.push(cg);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -116,6 +160,7 @@ export function taperedTube(curve, segs, radial, rFn, opts = {}) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
+  g.userData.caps = caps;
   return g;
 }
 
@@ -151,6 +196,14 @@ export function trunkGeo(x, z, y0, y1, r0, r1, opts = {}) {
       const a = i * (radial + 1) + j, b = (i + 1) * (radial + 1) + j;
       idx.push(a, b, a + 1, b, b + 1, a + 1);
     }
+  }
+  // Close the top with a shallow dome so the trunk never reads hollow from above.
+  {
+    const top = segsY * (radial + 1);
+    const c = pos.length / 3;
+    pos.push(x, y1 + r1 * 0.35, z);
+    uv.push(0.5, (y1 - y0) / 4 + 0.1);
+    for (let j = 0; j < radial; j++) idx.push(top + j + 1, top + j, c);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));

@@ -662,6 +662,28 @@ function clothTex(size) {
   return pair(res, 1.5);
 }
 
+/** Sawn/broken log end: growth rings, radial checks and a bark rim. UV center = pith. */
+function endGrainTex(size) {
+  const n1 = makeFbm(6, 4, 71);
+  return paint(size, (u, v, o) => {
+    const dx = u - 0.5, dy = v - 0.5;
+    const r = Math.hypot(dx, dy) * 2;
+    const a = Math.atan2(dy, dx);
+    const wob = n1(u * 2, v * 2) * 0.08;
+    const ring = Math.sin((r + wob) * 70) * 0.5 + 0.5;
+    const late = Math.pow(ring, 6);
+    const check = Math.pow(Math.max(0, Math.cos(a * 5 + n1(u, v) * 4)), 60) * smoothstep(0.15, 0.6, r) * 0.6;
+    const bark = smoothstep(0.86, 0.93, r);
+    let c = [0.62 - late * 0.16, 0.46 - late * 0.13, 0.3 - late * 0.1];
+    const heart = smoothstep(0.55, 0.2, r);
+    c = c.map((x, i) => x * (1 - heart * 0.18) + [0.05, 0.02, 0][i] * heart);
+    c = c.map((x) => x * (1 - check));
+    const bk = [0.25, 0.18, 0.12];
+    o[0] = lerp(c[0], bk[0], bark); o[1] = lerp(c[1], bk[1], bark); o[2] = lerp(c[2], bk[2], bark);
+    o[4] = -late * 0.25 - check * 0.8 + bark * 0.4;
+  });
+}
+
 let CACHE = null;
 
 /** Build (once) and return all textures. `quality` scales resolution. */
@@ -689,7 +711,9 @@ export function getTextures(quality = 'high') {
   const shaft = shaftTex(256, 512);
   const skin = skinTex(256);
   const cloth = clothTex(256);
-  CACHE = { bark, moss, stone, rock, planks, thatch, rope, vine, grass, dirt, mud, face, leaves, waterNormal, noise, glow, smoke, shaft, skin, cloth };
+  const endGrain = pair(endGrainTex(256), 2);
+  endGrain.map.wrapS = endGrain.map.wrapT = THREE.ClampToEdgeWrapping;
+  CACHE = { bark, moss, stone, rock, planks, thatch, rope, vine, grass, dirt, mud, face, leaves, waterNormal, noise, glow, smoke, shaft, skin, cloth, endGrain };
   CACHE.buildMs = performance.now() - t0;
   return CACHE;
 }

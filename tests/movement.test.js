@@ -7,25 +7,26 @@ test('player stands on spawn deck', () => {
   const g = makeGame();
   run(g, 1.5);
   assert.equal(g.player.state, 'ground');
-  assert.ok(Math.abs(g.player.pos.y - 12) < 0.1, `y=${g.player.pos.y}`);
+  assert.ok(Math.abs(g.player.pos.y - g.level.spawn.pos.y) < 0.15, `y=${g.player.pos.y}`);
 });
 
 test('running accelerates to run speed and jump leaves ground', () => {
   const g = makeGame();
+  g.player.placeAt(new THREE.Vector3(-28, g.game.world.terrain.heightAt(-28, -4) + 0.1, -4), Math.PI / 2);
   run(g, 0.5);
   g.input.moveY = 1;
-  run(g, 0.45, { dir: [0, -1] }); // run north on the deck
+  run(g, 0.45, { dir: [1, 0] }); // run east across open floor
   assert.ok(g.player.hspeed > 8, `speed ${g.player.hspeed}`);
   g.input.tap('jump');
-  run(g, 0.1, { dir: [0, -1] });
+  run(g, 0.1, { dir: [1, 0] });
   assert.equal(g.player.state, 'air');
 });
 
 test('falls off the deck and lands on the ground', () => {
   const g = makeGame();
-  g.player.placeAt(new THREE.Vector3(-23, 12.1, -11), 0);
+  g.player.placeAt(new THREE.Vector3(0, 8.1, 7.8), 0);
   g.input.moveY = 1;
-  const states = run(g, 4, { dir: [1, 0] });
+  const states = run(g, 4, { dir: [0, 1] });
   g.input.moveY = 0;
   run(g, 1);
   assert.ok(states.has('air'));
@@ -36,7 +37,7 @@ test('falls off the deck and lands on the ground', () => {
 test('grab onto a branch rail and grind it', () => {
   const g = makeGame();
   // Above the South Arm branch, falling.
-  const rail = g.game.rails.rails.find((r) => r.name === 'South Arm');
+  const rail = g.game.rails.rails.find((r) => r.name === 'West Spoke');
   const p = rail.pointAt(rail.length * 0.3, new THREE.Vector3());
   g.player.placeAt(p.clone().add(new THREE.Vector3(0.3, 1.4, 0)), 0);
   g.player.vel.set(0, -2, 6);
@@ -68,10 +69,7 @@ test('grab a vine, swing, and release with a jump', () => {
 
 test('jumping into a trunk runs up it, then clings', () => {
   const g = makeGame();
-  // Great Tree east side is at x ~ -28.2 (collider). Ground near (-20,-8)?
-  g.player.placeAt(new THREE.Vector3(-12, 20, 9), 0); // drop somewhere open first
-  run(g, 2);
-  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
+  const col = g.game.world.colliders.find((c) => c.name === 'Elder Tree');
   // Place player south-east of trunk on ground level and run at it.
   const start = new THREE.Vector3(col.x + 0, 0, col.z + col.r + 7);
   start.y = g.game.world.terrain.heightAt(start.x, start.z) + 0.5;

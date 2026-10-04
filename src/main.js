@@ -8,7 +8,7 @@ import { ComboSystem } from './game/tricks.js';
 import { Collectibles } from './game/collectibles.js';
 import { Hud } from './ui/hud.js';
 import { Menus } from './ui/menu.js';
-import { riverDist } from './world/terrain.js';
+import { waterDist } from './world/terrain.js';
 import { clamp } from './core/math.js';
 
 const params = new URLSearchParams(location.search);
@@ -74,9 +74,9 @@ async function boot() {
         menu: !playing,
         speed: playing ? p.speed : 0,
         airborne: p.state === 'air',
-        grind: { active: playing && p.state === 'grind', speed: p.grind.speed, kind: p.grind.rail ? p.grind.rail.kind : 'bark' },
+        grind: { active: playing && p.state === 'grind' && p.grind.mode === 'grind', speed: p.grind.speed, kind: p.grind.rail ? p.grind.rail.kind : 'bark' },
         waterfallDist: wf ? Math.hypot(g.camera.position.x - wf.x, g.camera.position.y - 10, g.camera.position.z - wf.zBottom) : 200,
-        riverDist: riverDist(g.camera.position.x, g.camera.position.z) + Math.max(0, g.camera.position.y - 2) * 0.5,
+        riverDist: waterDist(g.camera.position.x, g.camera.position.z) + Math.max(0, g.camera.position.y - 2) * 0.5,
       });
       const comboHeat = g.combo.active ? clamp(0.35 + g.combo.mult * 0.06, 0, 1) : 0;
       audio.setIntensity(playing ? Math.max(0.2, comboHeat, clamp((p.speed - 8) / 16, 0, 0.6)) : 0.1);
@@ -252,6 +252,14 @@ function wireFeedback(game) {
     input.rumble(0.1, 0.4, 90);
   });
   ev.on('railTransfer', () => a.grindStart('bark'));
+  ev.on('perch', (e) => {
+    if (e.fromAir) {
+      a.land(Math.max(4, e.impact), 'wood');
+      fx.chips(e.pos, 'bark', 4, pl.vel);
+      if (Math.random() < 0.5) fx.leaves(e.pos, 2, pl.vel);
+      input.rumble(0.08, 0.25, 70);
+    }
+  });
   ev.on('swingGrab', (e) => { a.vineGrab(); fx.leaves(e.pos.clone().add(new THREE.Vector3(0, 2, 0)), 4); input.rumble(0.2, 0.3, 100); });
   ev.on('swingRelease', (e) => { a.whoosh(clamp(e.speed / 15, 0.5, 1.5)); if (e.jump) a.jump('quiet'); });
   ev.on('wallrun', () => { a.wallrun(); input.rumble(0.05, 0.3, 80); });
@@ -303,7 +311,7 @@ function wireFeedback(game) {
 function perFrameFx(g, dt) {
   const p = g.player, fx = g.particles;
   // Grinding sparks/leaves.
-  if (p.state === 'grind' && p.grind.rail) {
+  if (p.state === 'grind' && p.grind.rail && p.grind.mode === 'grind') {
     g._grindFx = (g._grindFx || 0) + dt * p.grind.speed;
     while (g._grindFx > 1.2) {
       g._grindFx -= 1.2;

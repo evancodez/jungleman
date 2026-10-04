@@ -6,7 +6,7 @@ import { mergeGeometries, normalizeAttrs, leafCardGeo } from './geom.js';
 import { getMaterials, addWind, shared } from '../fx/materials.js';
 import { getTextures } from '../fx/textures.js';
 import { createWater, createWaterfall } from '../fx/water.js';
-import { WORLD, terrainHeight, terrainSplat, riverDist } from './terrain.js';
+import { WORLD, terrainHeight, terrainSplat, POOL } from './terrain.js';
 import { VINE_NODES } from '../physics/vines.js';
 import { clamp, smoothstep, rng } from '../core/math.js';
 import { SUN_DIR } from '../fx/sky.js';
@@ -92,8 +92,10 @@ export class LevelView {
       const [a, b, c, d] = terrainSplat(x, z, h, nrm.y);
       splat.set([a, b, c, d], i * 4);
       // AO: darker in the river bed and near the cliff base.
-      let ao = 1 - smoothstep(-1.5, -3.5, h) * 0.35;
-      ao *= 1 - smoothstep(1.5, 0, Math.abs(riverDist(x, z) - 7)) * 0.08;
+      let ao = 1 - smoothstep(-1.0, -3.0, h) * 0.35;
+      ao *= 1 - smoothstep(1.5, 0, Math.abs(Math.hypot(x - POOL.x, z - POOL.z) - POOL.r - 1)) * 0.08;
+      // Darker at the foot of the cliffs.
+      ao *= 1 - smoothstep(6, 0, Math.abs(h - 5)) * smoothstep(0.85, 0.6, nrm.y) * 0.25;
       col.set([ao, ao, ao], i * 3);
       uv.setXY(i, x / 4, z / 4);
     }
@@ -188,16 +190,6 @@ export class LevelView {
       this.group.add(m);
       this.waterfalls.push(m);
     }
-    // Cliff-top stream surface.
-    const g = new THREE.PlaneGeometry(8, 30, 1, 1);
-    g.rotateX(-Math.PI / 2);
-    g.translate(0, WORLD.cliffTop - 0.4, -89);
-    const stream = new THREE.Mesh(g, this.water.material);
-    const depth = new Float32Array(4).fill(1.2);
-    const flow = new Float32Array([0, 1, 0, 1, 0, 1, 0, 1]);
-    g.setAttribute('depth', new THREE.BufferAttribute(depth, 1));
-    g.setAttribute('flow', new THREE.BufferAttribute(flow, 2));
-    this.group.add(stream);
   }
 
   buildTorches() {

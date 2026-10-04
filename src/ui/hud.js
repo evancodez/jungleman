@@ -145,7 +145,7 @@ export class Hud {
     let cur = '';
     if (mode !== 'off') {
       const p = g.player;
-      if (p.state === 'grind' && p.grind.rail) cur = `${p.grind.rail.name}  ${p.grind.dist.toFixed(1)}m`;
+      if (p.state === 'grind' && p.grind.rail && p.grind.mode === 'grind') cur = `${p.grind.rail.name}  ${p.grind.dist.toFixed(1)}m`;
       else if (p.state === 'swing') cur = 'Vine Swing';
       else if (p.state === 'wallrun') cur = p.wall.type === 'spiral' ? 'Trunk Spiral' : p.wall.type === 'flat' ? 'Wall Run' : 'Trunk Run';
       else if (p.state === 'air' && p.pose.active) cur = `${POSE_NAMES[p.pose.type]}  ${p.pose.time.toFixed(1)}s`;
@@ -169,6 +169,7 @@ export class Hud {
     switch (p.state) {
       case 'grind':
         if (p.grind.rail && p.grind.rail.hang) out.push(P('jump', 'Drop'));
+        else if (p.grind.mode === 'run') out.push(P('jump', 'Hop'), P('grab', 'Grind'), `<div class="prompt">${glyph(i, 'move')} Run along</div>`);
         else out.push(P('jump', 'Jump off'), P('trick', 'Flip grind'), P('spinR', 'Switch'));
         break;
       case 'swing':

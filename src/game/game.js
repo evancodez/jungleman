@@ -175,7 +175,7 @@ export class Game {
       this.rig.update(dt, this.player, this.input);
     } else {
       this.vines.update(gdt, this.time, this.player.pos);
-      if (this.mode === 'title') this.rig.updateOrbit(dt, new THREE.Vector3(-8, 4, -12));
+      if (this.mode === 'title') this.rig.updateOrbit(dt, new THREE.Vector3(0, 6, 0));
       if (this.mode === 'debug' && this.debugCam) {
         this.camera.position.copy(this.debugCam.pos);
         this.camera.lookAt(this.debugCam.look);
