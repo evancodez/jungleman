@@ -161,7 +161,8 @@ test('jumping at a big trunk at an angle spirals around it', () => {
 test('brushing past a thin tree does not grab it', () => {
   const g = makeGame();
   const col = g.game.world.colliders.find((c) => c.type === 'cyl' && c.climbable && c.r < 1.4 && c.r > 0.6 && Math.abs(c.x) < 80 && Math.abs(c.z) < 80);
-  const start = V(col.x - 6, 0, col.z + col.r * 0.6);
+  // Pass with the capsule just clipping the trunk's side (a glancing contact).
+  const start = V(col.x - 6, 0, col.z + (col.r + 0.36) * 0.9);
   start.y = ground(g, start.x, start.z) + 0.1;
   g.player.placeAt(start, Math.PI / 2);
   run(g, 0.2);

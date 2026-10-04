@@ -272,6 +272,15 @@ export function buildLevel({ visual = true } = {}) {
   gap(ctx, 'Leap of Faith', 1000, [[-41, 35, -7], [-32, 45, 2]], [[-90, -8, -90], [90, 0, 90]], { land: 'water' });
   gap(ctx, 'Temple Run', 600, [[38, 11, -16], [54, 25, 0]], [[60, 6, -50], [75, 30, -30]]);
 
+  // ================================================================== GROUND LINES
+  // Fallen logs: low grind lines for flow along the jungle floor.
+  for (const [ax, az, bx, bz, r] of [[-60, 40, -46, 52, 0.9], [36, 30, 52, 34, 0.85], [56, 46, 66, 60, 0.8], [-8, 74, 8, 80, 0.9], [-50, -6, -42, 8, 0.8], [40, -40, 54, -46, 0.85]]) {
+    const a = V(ax, H(ax, az) + r * 0.7, az), b = V(bx, H(bx, bz) + r * 0.7, bz);
+    const m = V().addVectors(a, b).multiplyScalar(0.5);
+    m.y = Math.max(a.y, b.y) + 0.15;
+    branch(ctx, [a, m, b], { r0: r, r1: r * 0.8, name: 'Log Ride', railKind: 'log', leaves: false, mat: 'bark' });
+  }
+
   // ================================================================== DECOR
   decorate(ctx);
 
@@ -390,7 +399,7 @@ function decorate(ctx) {
   }
   // Ferns, bushes and grass on the floor (instances are skipped in headless builds,
   // but the RNG sequence and the tree colliders below stay identical).
-  for (let i = 0; i < 2600; i++) {
+  for (let i = 0; i < 4000; i++) {
     const x = R.range(-92, 92), z = R.range(-70, 92);
     const rd = riverDist(x, z);
     if (rd < 6.5) continue;
