@@ -1109,6 +1109,15 @@ export class Player {
       c.moving = 0;
     }
     if (inp.pressed('jump', 0.12)) {
+      if (inp.moveY > 0.5 && Math.abs(inp.moveX) < 0.6 && p.y + P.height < col.y1 - 1) {
+        // Climb leap: bound further up the trunk.
+        inp.consume('jump');
+        this.startTrunkRun(col, 0);
+        this.wall.vy = P.climbLeap;
+        this.wall.dist = c.climbed;
+        this.emit('climbLeap', { pos: this.pos });
+        return;
+      }
       this.wall.type = 'up';
       this.wall.theta = c.theta;
       this.wallKick();

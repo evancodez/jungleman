@@ -62,15 +62,16 @@ D-pad/left stick + ✕/○.
   pump the swing and jump to let go. Releasing near the top of the forward arc gives the most air.
   □ while swinging does a **Vine Flip**.
 - **Trees.** Jump head-on into a trunk to **run up it**. Hit it at an angle at speed to
-  **spiral around it**. When the run ends you cling, then climb or shimmy with the stick. Jump to
-  kick off toward the stick or camera direction. Climbing into a branch or deck pulls you up
-  onto it.
+  **spiral around it**. When the run ends you cling, then climb or shimmy with the stick. Hold up
+  and press jump to **climb-leap** further up the trunk, or press jump alone to kick off toward
+  the stick direction. Climbing into a branch or deck pulls you up onto it.
 - **Ledges.** Running into waist-high obstacles **vaults** them, and in the air you grab ledges
   automatically and mantle up.
 - **Slide** (○ / Shift while running). This is a low-friction power slide that speeds you up
   downhill, so use it on the **mud slide** hill. Slide-jump for a **Long Jump**. Hold ○ as you land
   to **roll** and keep your speed.
-- **Mushrooms** launch you. Hold jump on contact for a **Super Bounce**.
+- **Mushrooms** launch you. Hold jump on contact for a **Super Bounce**. The one beside the
+  spawn deck gets you back up to it from the ground.
 - **Zip-vines** run down from the cliff top and the lookout. Grab one and ride it, and it brakes
   near the end.
 - **Air tricks:** □ flips (front, back or side by stick direction, and tap again for doubles),

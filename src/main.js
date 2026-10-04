@@ -242,6 +242,7 @@ function wireFeedback(game) {
   ev.on('wallrun', () => { a.wallrun(); input.rumble(0.05, 0.3, 80); });
   ev.on('wallKick', (e) => { a.jump(); fx.chips(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), 'bark', 6); });
   ev.on('climb', () => a.mantle());
+  ev.on('climbLeap', (e) => { a.jump('quiet'); fx.chips(e.pos.clone().add(new THREE.Vector3(0, 0.3, 0)), 'bark', 4); });
   ev.on('mantle', () => a.mantle());
   ev.on('bounce', (e) => {
     a.bounce(e.super ? 1.3 : 1);

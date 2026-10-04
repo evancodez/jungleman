@@ -51,6 +51,7 @@ export const P = {
   climbUp: 3.4,
   climbDown: 5.5,
   climbSide: 3.2,
+  climbLeap: 10,
   wallKick: 8,
   wallKickUp: 10.5,
 

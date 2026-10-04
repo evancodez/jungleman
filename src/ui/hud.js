@@ -175,7 +175,7 @@ export class Hud {
         out.push(P('jump', 'Release (time it!)'), P('trick', 'Vine flip'), `<div class="prompt">${glyph(i, 'move')} Pump the swing</div>`);
         break;
       case 'climb':
-        out.push(`<div class="prompt">${glyph(i, 'move')} Climb</div>`, P('jump', 'Kick off'), P('grab', 'Let go'));
+        out.push(`<div class="prompt">${glyph(i, 'move')} Climb</div>`, P('jump', 'Up + Jump: leap · Jump: kick off'), P('grab', 'Let go'));
         break;
       case 'wallrun':
         out.push(P('jump', 'Wall kick'));

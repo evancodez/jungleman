@@ -28,6 +28,7 @@ export class ComboSystem {
     ev.on('swingGrab', (e) => { this.keepAlive(); this.checkGap(e.pos, 'vine'); });
     ev.on('wallrun', (e) => { this.keepAlive(); this.checkGap(e.pos, 'any'); });
     ev.on('climb', () => this.keepAlive());
+    ev.on('climbLeap', () => this.keepAlive());
     ev.on('splash', (e) => { this.checkGap(e.pos, 'water'); this.bank(); });
     ev.on('bail', () => this.lose());
     ev.on('respawn', () => this.lose(true));

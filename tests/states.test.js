@@ -172,3 +172,16 @@ test('brushing past a thin tree does not grab it', () => {
   run(g, 1.0, { dir: [1, 0], each: (c) => { if (['wallrun', 'climb'].includes(c.player.state)) grabbed = true; } });
   assert.ok(!grabbed, 'grabbed the tree while just passing by');
 });
+
+test('climb leaps bound up the trunk faster than climbing', () => {
+  const g = makeGame();
+  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
+  g.player.placeAt(V(col.x + 1, 3, col.z + col.r + 0.4), Math.PI, false);
+  g.player.startClimb(col);
+  g.input.moveY = 1;
+  const y0 = g.player.pos.y;
+  run(g, 2.0, { each: (c, t) => { if (c.player.state === 'climb' && Math.floor(t * 10) % 3 === 0) c.input.tap('jump'); } });
+  const gained = g.player.pos.y - y0;
+  assert.ok(g.log.some((e) => e.name === 'climbLeap'), 'no leap');
+  assert.ok(gained > 2.0 * 3.4 * 1.15, 'gained only ' + gained.toFixed(1));
+});

@@ -50,6 +50,8 @@ export function buildLevel({ visual = true } = {}) {
   deck(ctx, { c: [-25.5, 12, -8], size: [7, 10] });
   torch(ctx, V(-22.6, 12, -12.4));
   torch(ctx, V(-22.6, 12, -3.6));
+  // Launch mushroom beside Deck A (super-bounce up to the deck from the ground).
+  mushroom(ctx, { x: -18.6, z: -10.5, y0: H(-18.6, -10.5), top: H(-18.6, -10.5) + 4.2, r: 2.2, bounce: 16 });
   // Deck B – north-east, y=24.
   deck(ctx, { c: [-26.5, 24, -13.5], size: [6, 6] });
   torch(ctx, V(-24, 24, -16));
