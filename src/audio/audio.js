@@ -330,8 +330,8 @@ export class Audio {
     const v = 0.9 + R() * 0.2;
     switch (tag) {
       case 'wood': case 'thatch':
-        this.tone({ freq: 180 * v, freqEnd: 120, dur: 0.07, gain: 0.12 * k, type: 'triangle' });
-        this.noise(this.white, { dur: 0.05, gain: 0.05 * k, freq: 1400 * v, q: 2 });
+        this.tone({ freq: 180 * v, freqEnd: 120, dur: 0.07, gain: 0.17 * k, type: 'triangle' });
+        this.noise(this.white, { dur: 0.05, gain: 0.1 * k, freq: 1400 * v, q: 2 });
         break;
       case 'stone': case 'rock':
         this.noise(this.white, { dur: 0.04, gain: 0.07 * k, type: 'highpass', freq: 2200 * v });
@@ -341,20 +341,20 @@ export class Audio {
         this.noise(this.brown, { dur: 0.12, gain: 0.25 * k, type: 'lowpass', freq: 700 * v, freqEnd: 300 });
         break;
       case 'bark':
-        this.noise(this.white, { dur: 0.06, gain: 0.06 * k, freq: 900 * v, q: 1.5 });
-        this.tone({ freq: 140, freqEnd: 90, dur: 0.06, gain: 0.08 * k });
+        this.noise(this.white, { dur: 0.06, gain: 0.1 * k, freq: 900 * v, q: 1.5 });
+        this.tone({ freq: 140, freqEnd: 90, dur: 0.06, gain: 0.12 * k });
         break;
       default:
-        this.noise(this.pink, { dur: 0.08, gain: 0.12 * k, type: 'lowpass', freq: 1300 * v, freqEnd: 500 });
-        this.tone({ freq: 90, freqEnd: 55, dur: 0.07, gain: 0.08 * k });
-        if (R() < 0.4) this.noise(this.white, { t: 0.02, dur: 0.06, gain: 0.025 * k, freq: 3500, q: 1 }); // leaf crunch
+        this.noise(this.pink, { dur: 0.08, gain: 0.3 * k, type: 'lowpass', freq: 1300 * v, freqEnd: 500 });
+        this.tone({ freq: 90, freqEnd: 55, dur: 0.07, gain: 0.12 * k });
+        if (R() < 0.4) this.noise(this.white, { t: 0.02, dur: 0.06, gain: 0.05 * k, freq: 3500, q: 1 }); // leaf crunch
     }
   }
 
   jump(kind) {
     if (!this.ready) return;
-    this.noise(this.pink, { dur: 0.22, gain: 0.12, freq: 500, freqEnd: 1600, q: 1.5 });
-    if (kind !== 'quiet') this.noise(this.white, { dur: 0.09, gain: 0.03, freq: 900, q: 3, attack: 0.01 }); // breath
+    this.noise(this.pink, { dur: 0.22, gain: 0.5, freq: 500, freqEnd: 1600, q: 1.2 });
+    if (kind !== 'quiet') this.noise(this.white, { dur: 0.09, gain: 0.07, freq: 900, q: 3, attack: 0.01 }); // breath
   }
 
   land(impact, tag) {
@@ -365,31 +365,31 @@ export class Audio {
     if (k > 0.6) this.noise(this.brown, { dur: 0.3, gain: 0.2 * k, type: 'lowpass', freq: 600, freqEnd: 150 });
   }
 
-  roll() { if (this.ready) this.noise(this.pink, { dur: 0.45, gain: 0.12, type: 'lowpass', freq: 1200, freqEnd: 300 }); }
-  slide() { if (this.ready) this.noise(this.pink, { dur: 0.5, gain: 0.1, type: 'bandpass', freq: 900, freqEnd: 500, q: 0.8 }); }
-  skid() { if (this.ready) this.noise(this.white, { dur: 0.35, gain: 0.08, type: 'bandpass', freq: 1800, freqEnd: 900, q: 1.2 }); }
+  roll() { if (this.ready) this.noise(this.pink, { dur: 0.45, gain: 0.35, type: 'lowpass', freq: 1200, freqEnd: 300 }); }
+  slide() { if (this.ready) this.noise(this.pink, { dur: 0.5, gain: 0.35, type: 'bandpass', freq: 900, freqEnd: 500, q: 0.8 }); }
+  skid() { if (this.ready) this.noise(this.white, { dur: 0.35, gain: 0.2, type: 'bandpass', freq: 1800, freqEnd: 900, q: 1.0 }); }
 
   whoosh(power = 1) {
     if (!this.ready) return;
-    this.noise(this.pink, { dur: 0.3, gain: 0.1 * power, freq: 700, freqEnd: 2600, q: 2.5 });
+    this.noise(this.pink, { dur: 0.3, gain: 0.45 * power, freq: 700, freqEnd: 2600, q: 1.8 });
   }
 
   grindStart(kind) {
     if (!this.ready) return;
     const spec = GRIND_SOUND[kind] || GRIND_SOUND.bark;
-    this.noise(this.white, { dur: 0.12, gain: 0.12, freq: spec.freq * 1.5, q: 1.5 });
+    this.noise(this.white, { dur: 0.12, gain: 0.2, freq: spec.freq * 1.5, q: 1.5 });
     this.tone({ freq: kind === 'stone' ? 900 : 220, freqEnd: kind === 'stone' ? 600 : 140, dur: 0.1, gain: 0.08, type: 'triangle' });
   }
 
   creak() {
     if (!this.ready) return;
     const f = 160 + this.r() * 80;
-    this.tone({ type: 'sawtooth', freq: f, freqEnd: f * 1.4, dur: 0.25, gain: 0.04, vibrato: 25, vibRate: 30, filter: { type: 'bandpass', freq: 700, q: 3 }, rev: 0.2 });
+    this.tone({ type: 'sawtooth', freq: f, freqEnd: f * 1.4, dur: 0.25, gain: 0.09, vibrato: 25, vibRate: 30, filter: { type: 'bandpass', freq: 700, q: 3 }, rev: 0.2 });
   }
 
   vineGrab() {
     if (!this.ready) return;
-    this.noise(this.pink, { dur: 0.12, gain: 0.12, freq: 1800, q: 1 });
+    this.noise(this.pink, { dur: 0.14, gain: 0.4, freq: 1600, q: 0.9 });
     this.creak();
   }
 
@@ -439,7 +439,7 @@ export class Audio {
   trickTick(n = 0) {
     if (!this.ready) return;
     const f = 660 * Math.pow(2, PENTA[Math.min(n, PENTA.length - 1)] / 12);
-    this.tone({ type: 'triangle', freq: f, dur: 0.12, gain: 0.035 });
+    this.tone({ type: 'triangle', freq: f, dur: 0.12, gain: 0.065 });
   }
 
   comboLost() {
@@ -459,7 +459,7 @@ export class Audio {
 
   gap() {
     if (!this.ready) return;
-    [0, 4, 7, 12].forEach((s, i) => this.tone({ t: i * 0.09, type: 'square', freq: 392 * Math.pow(2, s / 12), dur: 0.22, gain: 0.03, filter: { type: 'lowpass', freq: 2400 }, rev: 0.3 }));
+    [0, 4, 7, 12].forEach((s, i) => this.tone({ t: i * 0.09, type: 'square', freq: 392 * Math.pow(2, s / 12), dur: 0.22, gain: 0.05, filter: { type: 'lowpass', freq: 2400 }, rev: 0.3 }));
   }
 
   chestPound(i = 0) {
@@ -509,11 +509,11 @@ export class Audio {
 }
 
 const GRIND_SOUND = {
-  bark: { gain: 0.09, freq: 900, low: 0.12, lowFreq: 300 },
-  log: { gain: 0.08, freq: 700, low: 0.15, lowFreq: 250 },
-  rope: { gain: 0.05, freq: 1500, low: 0.06, lowFreq: 400 },
-  stone: { gain: 0.11, freq: 3200, low: 0.06, lowFreq: 600 },
-  thatch: { gain: 0.08, freq: 2200, low: 0.05, lowFreq: 500 },
-  zip: { gain: 0.07, freq: 2600, low: 0.05, lowFreq: 700 },
-  wood: { gain: 0.08, freq: 1100, low: 0.1, lowFreq: 350 },
+  bark: { gain: 0.18, freq: 900, low: 0.2, lowFreq: 300 },
+  log: { gain: 0.16, freq: 700, low: 0.24, lowFreq: 250 },
+  rope: { gain: 0.1, freq: 1500, low: 0.1, lowFreq: 400 },
+  stone: { gain: 0.2, freq: 3200, low: 0.1, lowFreq: 600 },
+  thatch: { gain: 0.16, freq: 2200, low: 0.08, lowFreq: 500 },
+  zip: { gain: 0.14, freq: 2600, low: 0.08, lowFreq: 700 },
+  wood: { gain: 0.16, freq: 1100, low: 0.16, lowFreq: 350 },
 };
