@@ -116,6 +116,18 @@ export class Animator {
     const a = clamp(hs / 10.5, 0, 1.25);
     const ph = pl.footPhase * TAU;
     const s = Math.sin(ph), co = Math.cos(ph);
+    if (pl.rollT >= 0) {
+      // Forward roll out of a hard landing, then into the slide.
+      const t = clamp(pl.rollT / 0.45, 0, 1);
+      P.pivotX = t * TAU;
+      P.hipY = -0.45 * Math.sin(t * Math.PI);
+      const tuck = Math.sin(t * Math.PI);
+      legs(P, -2.0 * tuck - 0.2, 0.08, 2.2 * tuck + 0.2);
+      set(P, 'spine', 0.6 * tuck); set(P, 'neck', 0.4 * tuck);
+      arms(P, -1.2 * tuck - 0.2, 0.3, -1.4 * tuck);
+      P.rate = 40;
+      return;
+    }
     if (pl.sliding) {
       P.hipY = -0.52;
       P.pivotX = -0.25;

@@ -84,6 +84,7 @@ export class Player {
     this.speedLines = 0;
     this.preWallVel = { x: 0, z: 0 };
     this.slideEndTime = -10;
+    this.rollT = -1; // forward roll animation timer after a rolled landing
   }
 
   // ---------------------------------------------------------------- helpers
@@ -239,6 +240,7 @@ export class Player {
   step(dt) {
     this.time += dt;
     this.stateTime += dt;
+    if (this.rollT >= 0) { this.rollT += dt; if (this.rollT > 0.5 || this.state !== 'ground') this.rollT = -1; }
     switch (this.state) {
       case 'ground': this.updateGround(dt); break;
       case 'air': this.updateAir(dt); break;
@@ -606,6 +608,7 @@ export class Player {
     if (rollInput && hv > 4) {
       this.sliding = true;
       rolled = true;
+      this.rollT = 0;
       if (impact > 14) { this.vel.x *= 1.06; this.vel.z *= 1.06; }
     } else if (impact > 24) {
       // Very hard landing without a roll: stumble and lose momentum.
