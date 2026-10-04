@@ -196,3 +196,49 @@ test('steps up a small ledge from a standstill (waterfall cave floor)', () => {
   run(g, 0.5, { dir: [1, 0] });
   assert.ok(g.player.pos.x > -3.5 && g.player.pos.y > 1.15, g.player.pos.toArray().join(','));
 });
+
+test('climbing down after a mushroom bounce does not bounce off the dirt', () => {
+  const g = makeGame();
+  const cap = g.game.world.colliders.find((c) => c.bounce > 0);
+  g.player.placeAt(V(cap.x, cap.y1 + 2, cap.z), 0);
+  run(g, 0.4);
+  assert.ok(g.log.some((e) => e.name === 'bounce'));
+  // Teleport onto a trunk and climb down to the ground.
+  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
+  g.player.placeAt(V(col.x + 1, ground(g, col.x + 1, col.z + col.r + 3) + 2.5, col.z + col.r + 0.4), Math.PI, false);
+  g.player.startClimb(col);
+  const before = g.log.filter((e) => e.name === 'bounce').length;
+  g.input.moveY = -1;
+  run(g, 2.0);
+  g.input.moveY = 0;
+  run(g, 0.5);
+  assert.equal(g.log.filter((e) => e.name === 'bounce').length, before, 'bounced off the ground');
+});
+
+test('releasing a slide on a steep slope stands back up', () => {
+  const g = makeGame();
+  // Find a ~35 degree terrain spot.
+  const T = g.game.world.terrain, n = new THREE.Vector3();
+  let spot = null;
+  for (let x = -80; x < 80 && !spot; x += 1.5) for (let z = -60; z < 80 && !spot; z += 1.5) {
+    T.normalAt(x, z, n);
+    if (n.y > 0.72 && n.y < 0.82 && g.game.world.waterAt(x, z) < T.heightAt(x, z)) spot = { x, z, n: n.clone() };
+  }
+  assert.ok(spot, 'no steep spot found');
+  g.player.placeAt(V(spot.x, T.heightAt(spot.x, spot.z) + 0.05, spot.z), 0);
+  run(g, 0.3);
+  g.player.sliding = true;
+  g.player.height = 1.05;
+  g.player.vel.set(0, 0, 0);
+  run(g, 0.3);
+  assert.equal(g.player.sliding, false, 'stuck crouched on a slope');
+});
+
+test('a skid does not survive a jump into the next landing', () => {
+  const g = makeGame();
+  g.player.placeAt(V(40, ground(g, 40, 34) + 0.1, 34), 0);
+  run(g, 0.3);
+  g.player.skidding = true;
+  g.player.setState('air');
+  assert.equal(g.player.skidding, false);
+});

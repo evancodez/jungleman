@@ -98,6 +98,11 @@ export class Player {
     this.state = s;
     this.stateTime = 0;
     this.height = s === 'ground' && this.sliding ? P.crouchHeight : P.height;
+    if (s !== 'ground') {
+      // Ground-only flags must not leak into (or back out of) other states.
+      this.groundCol = null;
+      this.skidding = false;
+    }
     this.emit('state', { from: this.prevState, to: s });
   }
 
@@ -233,7 +238,8 @@ export class Player {
     this.landImpact = Math.max(0, this.landImpact - dt * 3);
 
     // Safety: fell out of the world.
-    if (this.pos.y < -30 || !Number.isFinite(this.pos.x)) this.respawn();
+    const p = this.pos;
+    if (p.y < -30 || !Number.isFinite(p.x + p.y + p.z) || !Number.isFinite(this.vel.x + this.vel.y + this.vel.z)) this.respawn();
     if (this.input.pressed('respawn')) { this.input.consume('respawn'); this.respawn(true); }
   }
 
@@ -292,7 +298,9 @@ export class Player {
     }
     if (this.sliding && (!wantSlide || hs < 2.5)) {
       // Stand up only if there is headroom.
-      if (this.world.capsuleFree(this.pos, P.radius, P.height, 0.05)) {
+      // Only the space above the crouched body matters (the slope underfoot doesn't).
+      const head = _v.set(this.pos.x, this.pos.y + P.crouchHeight - P.radius, this.pos.z);
+      if (this.world.capsuleFree(head, P.radius, P.height - P.crouchHeight + P.radius, 0.05)) {
         this.sliding = false;
         this.slideEndTime = this.time;
         this.height = P.height;
@@ -945,7 +953,15 @@ export class Player {
     const cs = this.world.capsuleContacts(p, P.radius * 0.9, P.height, this.contacts);
     for (const c of cs) {
       if (c.col === col) continue;
-      if (c.ny > 0.6 && w.vy <= 0.5) { this.pos.y += c.depth; this.vel.y = 0; this.land(-1, w.speed); return; }
+      if (c.ny > 0.6 && w.vy <= 0.5) {
+        this.emitWallTrick();
+        this.pos.y += c.depth;
+        this.vel.y = 0;
+        this.groundCol = c.col;
+        this.groundTag = c.tag;
+        this.land(-1, w.speed);
+        return;
+      }
       if (c.depth > 0.12) { this.endWallRun(true); return; }
     }
   }
@@ -1103,7 +1119,12 @@ export class Player {
     }
     if (onGround) {
       const hit = this.probeGround(0.4);
-      if (hit) p.y = hit.point.y;
+      if (hit) {
+        p.y = hit.point.y;
+        this.groundCol = hit.col;
+        this.groundTag = hit.tag;
+        this.groundNormal.copy(hit.normal);
+      }
       this.setState('ground');
       this.grounded = true;
       return;

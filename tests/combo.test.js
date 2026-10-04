@@ -69,3 +69,14 @@ test('gap is detected from launch region to landing region', () => {
   assert.equal(gaps.length, 1);
   assert.equal(gaps[0].name, 'Hut Hop');
 });
+
+test('slide distance does not carry over between slides', () => {
+  const g = withCombo();
+  g.player.sliding = true;
+  g.player.vel.set(10, 0, 0);
+  g.combo.update(0.6); // 6m of slide accumulated
+  g.player.sliding = false;
+  g.player.setState('air');
+  g.combo.update(1 / 60);
+  assert.equal(g.combo.slideDist, 0);
+});

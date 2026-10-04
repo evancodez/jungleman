@@ -112,6 +112,7 @@ export class ComboSystem {
   update(dt) {
     const pl = this.game.player;
     if (pl.state === 'ground' && pl.sliding) this.slideDist += pl.hspeed * dt;
+    else this.slideDist = 0;
     if (!this.active) return;
     const st = pl.state;
     const sliding = st === 'ground' && pl.sliding && pl.hspeed > 4;

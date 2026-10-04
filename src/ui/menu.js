@@ -208,7 +208,12 @@ export class Menus {
         { type: 'button', label: 'Settings', action: () => this.showSettings(() => this.pop()) },
         { type: 'button', label: 'Gaps & Secrets', action: () => this.showGaps(() => this.pop()) },
       ],
-      onBack: () => { this.pop(); if (this.titleEl) { this.titleEl.querySelector('.press').style.display = ''; this.titleEl.classList.remove('menu-open'); } },
+      onBack: () => {
+        this.pop();
+        // The key/button that triggered "back" must not count as "press any button" again.
+        this.game.input.clearNav();
+        if (this.titleEl) { this.titleEl.querySelector('.press').style.display = ''; this.titleEl.classList.remove('menu-open'); }
+      },
       footer: `<div class="small-note">Score Attack best: <b>${fmt(best)}</b></div>`,
     });
     s.el.classList.remove('dim');
