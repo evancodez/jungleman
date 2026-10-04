@@ -400,23 +400,24 @@ export class Player {
     p.addScaledVector(v, dt);
     this.resolve(dt);
 
-    // Step up small obstacles, or vault over waist-high ones.
-    if (this.wallHit && Math.hypot(vx0, vz0) > 0.5) {
+    // Step up small obstacles, vault waist-high ones, or scramble up trunks.
+    if (this.wallHit) {
       const wn = this.wallHit;
+      const hs = Math.hypot(vx0, vz0);
       const into = -(vx0 * wn.nx + vz0 * wn.nz);
-      if (into > 0.3) {
-        if (!this.tryStepUp(sx, sy, sz, vx0, vz0, dt)) {
-          const hs = Math.hypot(vx0, vz0);
-          const inputInto = -(this.inputDir.x * wn.nx + this.inputDir.z * wn.nz) * this.inputMag;
-          // Running into a climbable trunk: start scrambling up it.
-          if (wn.col && wn.col.climbable && wn.col.type === 'cyl' && inputInto > 0.6) {
-            this.wallPush += dt;
-            if (this.wallPush > 0.12) {
-              this.wallPush = 0;
-              if (hs > 5.5) this.startTrunkRun(wn.col, hs); else this.startClimb(wn.col);
-              return;
-            }
-          } else if (hs > 2.5 && inputInto > 0.35 && !(wn.col && wn.col.noMantle)) {
+      const inputInto = -(this.inputDir.x * wn.nx + this.inputDir.z * wn.nz) * this.inputMag;
+      if (wn.col && wn.col.climbable && wn.col.type === 'cyl' && inputInto > 0.6) {
+        // Pushing the stick into a trunk: start running up / climbing it.
+        this.wallPush += dt;
+        if (this.wallPush > 0.12) {
+          this.wallPush = 0;
+          if (hs > 5.5) this.startTrunkRun(wn.col, hs); else this.startClimb(wn.col);
+          return;
+        }
+      } else {
+        this.wallPush = 0;
+        if (into > 0.3 && hs > 0.5 && !this.tryStepUp(sx, sy, sz, vx0, vz0, dt)) {
+          if (hs > 2.5 && inputInto > 0.35 && !(wn.col && wn.col.noMantle)) {
             const ledge = this.findLedge(wn.nx, wn.nz, 0.45, 1.6);
             if (ledge) { this.startMantle(ledge, true, Math.max(hs, 5)); return; }
           }
@@ -424,9 +425,9 @@ export class Player {
       }
     } else this.wallPush = 0;
 
-    // Stick to the ground unless launching upward (ramps).
-    const launching = v.y > 2.5 && !this.hitGround;
-    const hit = launching ? null : this.probeGround(P.snapDown);
+    // Stick to the ground. When moving upward (ramps, stairs) only accept
+    // ground right under our feet, so running off a ramp lip launches you.
+    const hit = this.probeGround(v.y > 2.5 && !this.hitGround ? 0.14 : P.snapDown);
     if (hit && hit.point.y <= p.y + 0.36) {
       p.y = hit.point.y;
       this.groundNormal.copy(hit.normal);
@@ -456,8 +457,15 @@ export class Player {
       // nudge a little farther to clear the edge
       return false;
     }
-    const hit = this.world.groundBelow(test.x, test.y + 0.05, test.z, P.stepHeight + 0.1);
-    if (!hit || hit.normal.y < 0.7 || hit.point.y < sy + 0.03) return false;
+    // Probe under the center and under the leading edge of the capsule.
+    const hs = Math.hypot(vx, vz) || 1;
+    let hit = this.world.groundBelow(test.x, test.y + 0.05, test.z, P.stepHeight + 0.1);
+    if (!hit || hit.point.y < sy + 0.03) {
+      const ex = test.x + (vx / hs) * P.radius * 0.9, ez = test.z + (vz / hs) * P.radius * 0.9;
+      const h2 = this.world.groundBelow(ex, test.y + 0.05, ez, P.stepHeight + 0.1);
+      if (h2 && h2.point.y >= sy + 0.03) hit = h2;
+    }
+    if (!hit || hit.normal.y < 0.65 || hit.point.y < sy + 0.03) return false;
     const np = _v2.set(test.x, hit.point.y, test.z);
     if (!this.world.capsuleFree(np, P.radius, this.height, 0.04)) return false;
     this.visOffset.y += this.pos.y - np.y;
@@ -615,7 +623,7 @@ export class Player {
     this.vel.y = vy;
     this.sliding = false;
     this.height = P.height;
-    if (this.flip.active && this.flip.target - this.flip.angle > 1.0 && this.flip.angle > 0.5) { /* forgiving: flips continue */ }
+    // Flips in progress simply continue through a bounce (forgiving).
     this.jumpCut = false;
     this.launchPos.copy(this.pos);
     this.pos.y += 0.05;
@@ -735,11 +743,13 @@ export class Player {
       const tx = -nz, tz = nx; // tangent (CCW)
       const tang = hx * tx + hz * tz;
       const total = Math.hypot(into > 0 ? into : 0, tang);
-      if (Math.abs(tang) > 6 && (Math.abs(d.x * tx + d.z * tz) * m > 0.25 || inputInto > 0.25)) {
+      // Spirals need a proper trunk and the stick pushing toward it.
+      if (col.r >= 1.5 && Math.abs(tang) > 6 && inputInto > 0.12) {
         this.startSpiral(col, Math.sign(tang), Math.max(Math.abs(tang), total * 0.85), vyBefore);
         return true;
       }
-      if (inputInto > 0.35 || into > 3) {
+      // Run up / grab on only when steering into the trunk (or hitting it dead on).
+      if (inputInto > 0.5 || into > 7) {
         if (vyBefore > -6 && total > 5) this.startTrunkRun(col, total);
         else this.startClimb(col);
         return true;
@@ -883,7 +893,7 @@ export class Player {
       v.set(0, w.vy, 0);
       w.dist += Math.abs(w.vy) * dt;
       this.yaw = Math.atan2(-Math.cos(w.theta), -Math.sin(w.theta));
-      if (inp.pressed('jump', 0.12)) { this.wallKick(true); return; }
+      if (inp.pressed('jump', 0.12)) { this.wallKick(); return; }
       // Blocked above or reached the top?
       if (this.headBlocked() || p.y + P.height > col.y1 - 0.1) {
         if (this.tryMantleAbove()) return;
@@ -914,22 +924,22 @@ export class Player {
       w.dist += w.speed * dt;
       // Re-glue to the wall plane, and detect running off its end.
       const probe = this.world.raycast(_v.set(p.x, p.y + 1.0, p.z), _v2.set(-w.normal.x, 0, -w.normal.z), P.radius + 0.6);
-      if (!probe || probe.col !== col) { this.endWallRun(false); return; }
+      if (!probe || probe.col !== col) { this.endWallRun(); return; }
       const gap = probe.t - P.radius - 0.02;
       p.x -= w.normal.x * gap;
       p.z -= w.normal.z * gap;
     }
 
-    if (inp.pressed('jump', 0.12)) { this.wallKick(false); return; }
-    if (inp.pressed('grab') || inp.pressed('slide')) { inp.consume('grab'); this.endWallRun(true); return; }
-    if (this.stateTime > P.wallRunTime || w.vy < -7 || w.speed < 4) { this.endWallRun(false); return; }
-    if (w.type === 'spiral' && (p.y + P.height > col.y1 || p.y < col.y0 - 0.5)) { this.endWallRun(false); return; }
+    if (inp.pressed('jump', 0.12)) { this.wallKick(); return; }
+    if (inp.pressed('grab') || inp.pressed('slide')) { inp.consume('grab'); this.endWallRun(); return; }
+    if (this.stateTime > P.wallRunTime || w.vy < -7 || w.speed < 4) { this.endWallRun(); return; }
+    if (w.type === 'spiral' && (p.y + P.height > col.y1 || p.y < col.y0 - 0.5)) { this.endWallRun(); return; }
     // Collisions with other geometry (branches, ground).
     const cs = this.world.capsuleContacts(p, P.radius * 0.9, P.height, this.contacts);
     for (const c of cs) {
       if (c.col === col) continue;
       if (c.ny > 0.6 && w.vy <= 0.5) { this.pos.y += c.depth; this.vel.y = 0; this.land(-1, w.speed); return; }
-      if (c.depth > 0.12) { this.endWallRun(false, true); return; }
+      if (c.depth > 0.12) { this.endWallRun(true); return; }
     }
   }
 
@@ -962,7 +972,7 @@ export class Player {
     return false;
   }
 
-  wallKick(fromTrunkRun) {
+  wallKick() {
     const w = this.wall, d = this.inputDir, m = this.inputMag;
     let nx, nz;
     if (w.type === 'flat') { nx = w.normal.x; nz = w.normal.z; }
@@ -983,7 +993,6 @@ export class Player {
       if (m > 0.3 && d.x * nx + d.z * nz > -0.3) { dx = nx * 0.5 + d.x; dz = nz * 0.5 + d.z; }
       const l = Math.hypot(dx, dz) || 1;
       vx = dx / l * P.wallKick; vz = dz / l * P.wallKick;
-      void fromTrunkRun;
     }
     this.vel.set(vx, vy, vz);
     this.yaw = Math.atan2(vx, vz);
@@ -1010,7 +1019,7 @@ export class Player {
     }
   }
 
-  endWallRun(drop, bumped = false) {
+  endWallRun(bumped = false) {
     const w = this.wall;
     this.emitWallTrick();
     if (w.type === 'spiral') {
@@ -1020,7 +1029,6 @@ export class Player {
       this.vel.x += w.normal.x * 2; this.vel.z += w.normal.z * 2;
     }
     if (bumped) { this.vel.x *= 0.3; this.vel.z *= 0.3; }
-    void drop;
     this.jumpCut = false;
     this.launchPos.copy(this.pos);
     this.lastWallActionTime = this.time;
@@ -1103,7 +1111,7 @@ export class Player {
     if (inp.pressed('jump', 0.12)) {
       this.wall.type = 'up';
       this.wall.theta = c.theta;
-      this.wallKick(false);
+      this.wallKick();
       return;
     }
     if (inp.pressed('grab') || inp.pressed('slide')) {

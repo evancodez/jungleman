@@ -497,12 +497,16 @@ export function stairs(ctx, o) {
   const yaw = Math.atan2(dir.x, dir.z);
   const pitch = Math.atan2(rise, hlen);
   const len = Math.hypot(hlen, rise);
-  const mid = V().addVectors(a, b).multiplyScalar(0.5);
   const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-pitch, yaw, 0, 'YXZ'));
-  // Smooth ramp collider (thick, under the step tips).
+  // Smooth ramp collider (thick, under the step tips). It starts below the
+  // ground so there is no lip to trip over at the foot of the stairs.
   const th = 1.5;
+  const sdir = V().subVectors(b, a).normalize();
+  const a2 = a.clone().addScaledVector(sdir, -1.2);
+  const len2 = a2.distanceTo(b);
+  const mid2 = V().addVectors(a2, b).multiplyScalar(0.5);
   const off = V(0, -th / 2, 0).applyQuaternion(q);
-  ctx.world.add(new BoxCollider(mid.clone().add(off), V(o.width / 2, th / 2, len / 2), q, 'stone', {}));
+  ctx.world.add(new BoxCollider(mid2.add(off), V(o.width / 2, th / 2, len2 / 2), q, 'stone', {}));
   if (ctx.visual) {
     const steps = o.steps ?? Math.round(rise / 0.4);
     const sh = rise / steps, sd = hlen / steps;
@@ -526,7 +530,7 @@ export function stairs(ctx, o) {
     const rail = new Rail([ra.clone().add(V(0, h + 0.3, 0)), rb.clone().add(V(0, h + 0.3, 0))], { kind: 'stone', radius: 0.3, name: 'Temple Rail' });
     ctx.rails.add(rail);
     const c = V().addVectors(ra, rb).multiplyScalar(0.5).add(V(0, h / 2, 0));
-    solid(ctx, { c: [c.x, c.y, c.z], size: [0.6, h + 0.6, len], rotX: -pitch, rotY: yaw, mat: 'stone', tag: 'stone', tile: 2 });
+    solid(ctx, { c: [c.x, c.y, c.z], size: [0.6, h + 0.6, len], rotX: -pitch, rotY: yaw, mat: 'stone', tag: 'stone', tile: 2, noMantle: true });
   }
 }
 

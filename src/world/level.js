@@ -188,7 +188,7 @@ export function buildLevel({ visual = true } = {}) {
   collectible(ctx, 'idol', V(-29.5, 15.3, cliffFaceZ(-29.5, 14) + 1.5), 'Ledge Idol');
   // Waterfall cave: hollow behind the falls.
   waterfallCave(ctx);
-  ctx.waterfalls.push({ x: 0, top: WORLD.cliffTop - 0.3, zTop: -74.2, bottom: -1, zBottom: -67.2, width: 7.5 });
+  ctx.waterfalls.push({ x: 0, top: WORLD.cliffTop - 0.3, zTop: -74.2, bottom: -1, zBottom: -64.4, width: 7.5 });
   // Cliff top extras.
   torch(ctx, V(-17.5, H(-17.5, -78.5), -78.5));
   collectible(ctx, 'idol', V(-52, H(-52, -80) + 1.4, -80), 'Cliff Idol');
@@ -354,7 +354,10 @@ function decorate(ctx) {
       const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1);
       if (Math.hypot(x - ax - dx * t, z - az - dz * t) < 7 + rad) return true;
     }
-    return Math.hypot(x + 42, z - 34) < 9 + rad; // kicker landing zone
+    if (Math.hypot(x + 42, z - 34) < 9 + rad) return true; // kicker landing zone
+    // Designed flight paths: mushroom garden, temple stair approach, village ramp.
+    const zones = [[-44, 26, -8, 60], [14, -15, 28, -1], [12, 38, 26, 52]];
+    return zones.some(([x0, z0, x1, z1]) => x > x0 - rad && x < x1 + rad && z > z0 - rad && z < z1 + rad);
   };
   const occupied = (x, z, y, rad) => {
     if (onRoute(x, z, rad)) return true;
@@ -383,8 +386,8 @@ function decorate(ctx) {
     if (occupied(x, z, y, s)) continue;
     boulder(ctx, x, y + 0.2, z, s, { sy: 0.7 });
   }
-  if (!ctx.visual) return;
-  // Ferns, bushes and grass on the floor.
+  // Ferns, bushes and grass on the floor (instances are skipped in headless builds,
+  // but the RNG sequence and the tree colliders below stay identical).
   for (let i = 0; i < 2600; i++) {
     const x = R.range(-92, 92), z = R.range(-70, 92);
     const rd = riverDist(x, z);

@@ -130,8 +130,9 @@ export function createWater(textures) {
         vec2 sv = vec2(dot(vWPos.xz, vec2(-fd.y, fd.x)) * 0.35, dot(vWPos.xz, fd) * 0.04 - time * 0.35 * sp);
         float streak = smoothstep(0.72, 0.9, texture2D(noise, sv).b);
         foam += streak * sp * 0.22;
-        float poolDist = length(vWPos.xz - vec2(0.0, -66.5));
-        foam += smoothstep(9.0, 2.0, poolDist) * smoothstep(0.35, 0.7, texture2D(noise, vWPos.xz * 0.3 + vec2(0.0, time * 0.4)).g);
+        float poolDist = length((vWPos.xz - vec2(0.0, -64.4)) * vec2(0.7, 1.0));
+        float bub = texture2D(noise, vWPos.xz * 0.55 + vec2(0.0, time * 0.5)).g * 0.6 + texture2D(noise, vWPos.xz * 1.3 - vec2(time * 0.2, 0.0)).r * 0.4;
+        foam += smoothstep(8.0, 1.5, poolDist) * smoothstep(0.5, 0.75, bub) * 0.9;
         col = mix(col, vec3(0.88, 0.92, 0.88), clamp(foam, 0.0, 1.0) * 0.7);
         float alpha = mix(0.25, 0.94, smoothstep(0.0, 1.2, vDepth));
         alpha = max(alpha, clamp(foam, 0.0, 1.0) * 0.8);

@@ -149,7 +149,7 @@ export class LevelView {
     for (const b of ctx.bounceVisuals) {
       const grp = new THREE.Group();
       grp.position.set(b.x, b.top - 0.7, b.z);
-      const cap = new THREE.Mesh(capGeo, this.M.mushroomCap);
+      const cap = new THREE.Mesh(capGeo, this.M.mushroomCapSolid);
       cap.scale.set(b.r * 1.12, b.r * 1.12, b.r * 1.12);
       cap.castShadow = true;
       cap.receiveShadow = true;

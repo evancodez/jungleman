@@ -131,3 +131,44 @@ test('no NaNs over a long random input session', () => {
   assert.ok(Number.isFinite(p.x + p.y + p.z), 'NaN position');
   console.log('random session states:', [...states(g)].join(','));
 });
+
+test('running up the temple stairs stays grounded and reaches the top tier', () => {
+  const g = makeGame();
+  g.player.placeAt(V(22, ground(g, 22, -8) + 0.1, -8), Math.PI / 2);
+  run(g, 0.3);
+  g.input.moveY = 1;
+  let airFrames = 0, frames = 0;
+  run(g, 3.0, { dir: [1, 0], each: (c) => { frames++; if (c.player.state === 'air' && c.player.pos.x > 27 && c.player.pos.x < 38) airFrames++; } });
+  assert.ok(g.player.pos.y > 11.5, 'y=' + g.player.pos.y.toFixed(2) + ' x=' + g.player.pos.x.toFixed(1));
+  assert.ok(airFrames < 6, 'bounced into the air ' + airFrames + ' frames on the stairs');
+});
+
+test('jumping at a big trunk at an angle spirals around it', () => {
+  const g = makeGame();
+  const col = g.game.world.colliders.find((c) => c.name === 'Great Tree');
+  // Start south of the trunk, offset east, running west (tangent), steering slightly toward it.
+  const start = V(col.x + 8, 0, col.z + col.r + 1.2);
+  start.y = ground(g, start.x, start.z) + 4.5;
+  g.player.placeAt(start, -Math.PI / 2);
+  g.player.setState('air');
+  g.player.vel.set(-12, 3, -1.5);
+  g.input.moveY = 1;
+  let spiral = false;
+  run(g, 1.0, { dir: [-1, -0.35], each: (c) => { if (c.player.state === 'wallrun' && c.player.wall.type === 'spiral') spiral = true; } });
+  assert.ok(spiral, 'no spiral; state=' + g.player.state);
+});
+
+test('brushing past a thin tree does not grab it', () => {
+  const g = makeGame();
+  const col = g.game.world.colliders.find((c) => c.type === 'cyl' && c.climbable && c.r < 1.4 && c.r > 0.6 && Math.abs(c.x) < 80 && Math.abs(c.z) < 80);
+  const start = V(col.x - 6, 0, col.z + col.r * 0.6);
+  start.y = ground(g, start.x, start.z) + 0.1;
+  g.player.placeAt(start, Math.PI / 2);
+  run(g, 0.2);
+  g.player.setState('air');
+  g.player.vel.set(10, 5, 0);
+  g.input.moveY = 1;
+  let grabbed = false;
+  run(g, 1.0, { dir: [1, 0], each: (c) => { if (['wallrun', 'climb'].includes(c.player.state)) grabbed = true; } });
+  assert.ok(!grabbed, 'grabbed the tree while just passing by');
+});

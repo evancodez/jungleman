@@ -236,7 +236,8 @@ export function getMaterials() {
   const rope = std({ map: T.rope.map, normalMap: T.rope.normalMap, roughness: 1, color: 0xd8c39a });
   const vine = std({ map: T.vine.map, normalMap: T.vine.normalMap, roughness: 0.8, color: 0x9fbf6a });
   const mushroomCap = std({ color: 0xd8573a, roughness: 0.55, vertexColors: true });
-  const mushroomStem = std({ color: 0xe8dcc2, roughness: 0.8, vertexColors: true });
+  const mushroomCapSolid = std({ color: 0xc9472c, roughness: 0.5 });
+  const mushroomStem = std({ color: 0xc9bda2, roughness: 0.8, vertexColors: true });
   const mud = std({ map: T.mud.map, normalMap: T.mud.normalMap, roughness: 0.4, vertexColors: true });
 
   const leaves = addNearFade(addLeafTranslucency(addWind(std({
@@ -251,6 +252,6 @@ export function getMaterials() {
   const gold = new THREE.MeshStandardMaterial({ color: 0xffc845, metalness: 1, roughness: 0.28, emissive: 0x6a4400, emissiveIntensity: 0.6 });
   const letter = new THREE.MeshStandardMaterial({ color: 0xfff1c0, metalness: 0.2, roughness: 0.4, emissive: 0xffaa22, emissiveIntensity: 1.2 });
 
-  LIB = { bark, branch, stone, face, rock, planks, wood, thatch, rope, vine, mushroomCap, mushroomStem, mud, leaves, fern, hanging, torchWood, gold, letter, terrain: terrainMaterial() };
+  LIB = { bark, branch, stone, face, rock, planks, wood, thatch, rope, vine, mushroomCap, mushroomCapSolid, mushroomStem, mud, leaves, fern, hanging, torchWood, gold, letter, terrain: terrainMaterial() };
   return LIB;
 }

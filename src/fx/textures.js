@@ -213,17 +213,27 @@ function stoneBlocksTex(size) {
 }
 
 function rockTex(size) {
+  // Weathered stone with sedimentary strata, sparse cracks and pitting.
   const n1 = makeFbm(4, 6, 41);
   const n2 = makeFbm(16, 3, 42);
-  const vor = makeVoronoi(6, 43);
+  const n3 = makeFbm(2, 3, 44);
+  const vor = makeVoronoi(5, 43, 5, 0.6);
   return paint(size, (u, v, o) => {
-    const [d1, d2] = vor(u, v);
-    const ridge = smoothstep(0.0, 0.18, d2 - d1 + n1(u * 2, v * 2) * 0.12);
-    const nn = n1(u, v), fine = n2(u, v);
-    const h = ridge * 0.35 + nn * 0.5 + fine * 0.2;
-    const base = 0.34 + nn * 0.14 + fine * 0.06;
-    o[0] = base * 0.98; o[1] = base * 0.93; o[2] = base * 0.82;
-    o[0] *= 0.75 + ridge * 0.25; o[1] *= 0.75 + ridge * 0.25; o[2] *= 0.75 + ridge * 0.25;
+    const nn = n1(u, v), fine = n2(u, v), big = n3(u, v);
+    const warp = nn * 0.9 + big * 0.6;
+    const strata = Math.sin((v * 9 + warp) * Math.PI * 2);
+    const layer = smoothstep(0.75, 1.0, Math.abs(strata));
+    const band = Math.sin((v * 3 + big) * Math.PI * 2) * 0.5 + 0.5;
+    const [d1, d2] = vor(u + nn * 0.05, v);
+    const crack = smoothstep(0.05, 0.0, d2 - d1) * smoothstep(-0.1, 0.3, fine);
+    const pit = smoothstep(0.35, 0.6, fine) * 0.3;
+    const h = 0.55 + nn * 0.35 - layer * 0.25 - crack * 0.45 - pit * 0.3 + band * 0.1;
+    const base = 0.32 + nn * 0.1 + band * 0.07 + fine * 0.04;
+    o[0] = base * 1.0 - layer * 0.05; o[1] = base * 0.95 - layer * 0.05; o[2] = base * 0.84 - layer * 0.04;
+    o[0] *= 1 - crack * 0.45; o[1] *= 1 - crack * 0.45; o[2] *= 1 - crack * 0.42;
+    // Warm iron staining.
+    const stain = smoothstep(0.2, 0.6, big + fine * 0.3) * 0.18;
+    o[0] += stain * 0.12; o[1] += stain * 0.05;
     o[4] = h;
   });
 }
